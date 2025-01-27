@@ -12,8 +12,12 @@ struct PetsController: RouteCollection {
 
     @Sendable
     func getAllPets(req: Request) async throws -> [Pet] {
-        try await Pet.query(on: req.db)
-            .all()
+        do {
+            return try await Pet.query(on: req.db)
+                .all()
+        } catch {
+            return []
+        }
     }
 
     @Sendable
@@ -23,7 +27,7 @@ struct PetsController: RouteCollection {
             try await pet.create(on: req.db)
             return .created
         } catch {
-            throw Abort(.badRequest, reason: "Cannot post new pet")
+            throw Abort(.badRequest, reason: error.localizedDescription)
         }
     }
     

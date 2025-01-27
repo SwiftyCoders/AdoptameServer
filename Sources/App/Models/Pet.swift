@@ -1,51 +1,83 @@
 import Fluent
 import Vapor
 
+enum PetType: String, Codable {
+    case dog
+    case cat
+    case rabbit
+    case bird
+    case reptile
+    case other
+}
+
+enum PetSize: String, Codable {
+    case small
+    case medium
+    case large
+}
+
 final class Pet: Model, Content, @unchecked Sendable {
     static let schema = "pets"
     
     @ID(key: .id)
     var id: UUID?
     
-    @Field(key: .name)
+    @Field(key: "name")
     var name: String
     
-    @Field(key: .accessKey)
-    var accessKey: UUID?
+    @Field(key: "age")
+    var age: Int
     
-    @Field(key: .age)
-    var age: String
+    @Enum(key: "pet_type")
+    var type: PetType
     
-    @Field(key: .breed)
+    @Enum(key: "pet_size")
+    var size: PetSize
+    
+    @Field(key: "breed")
     var breed: String?
     
-    @Field(key: .summary)
-    var summary: String?
+    @Field(key: "description")
+    var description: String
     
-    @Field(key: .type)
-    var type: String?
+    @Field(key: "photo_url")
+    var photoUrl: String
     
-    @Field(key: .size)
-    var size: String?
+    @Field(key: "status")
+    var status: String
     
-    @Field(key: .status)
-    var status: String?
+    @Parent(key: "protector_id")
+    var protectora: Protector
     
-    @Field(key: .color)
-    var color: String?
+    @Timestamp(key: "created_at", on: .create)
+    var createdAt: Date?
+    
+    @Timestamp(key: "updated_at", on: .update)
+    var updatedAt: Date?
     
     init() {}
     
-    init(id: UUID? = nil, name: String, accessKey: UUID? = nil, age: String, breed: String? = nil, summary: String? = nil, type: String? = nil, size: String? = nil, status: String? = nil, color: String? = nil) {
+    init(
+        id: UUID? = nil,
+        name: String,
+        age: Int,
+        type: PetType,
+        size: PetSize,
+        breed: String? = nil,
+        description: String,
+        photoUrl: String,
+        status: String,
+        protectoraID: UUID
+    ) {
         self.id = id
         self.name = name
-        self.accessKey = accessKey
         self.age = age
-        self.breed = breed
-        self.summary = summary
         self.type = type
         self.size = size
+        self.breed = breed
+        self.description = description
+        self.photoUrl = photoUrl
         self.status = status
-        self.color = color
+        self.$protectora.id = protectoraID
     }
 }

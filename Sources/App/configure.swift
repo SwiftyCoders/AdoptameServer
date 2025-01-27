@@ -13,6 +13,7 @@ public func configure(_ app: Application) async throws {
         fatalError("DATABASE_URL is not set")
     }
 
+    app.migrations.add(ProtectorsMigration())
     app.migrations.add(PetsMigration())
 
     app.views.use(.leaf)
