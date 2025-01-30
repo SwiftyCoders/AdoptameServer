@@ -1,10 +1,3 @@
-//
-//  File.swift
-//  Rescatame
-//
-//  Created by Alberto Alegre Bravo on 25/1/25.
-//
-
 import Vapor
 import Fluent
 
@@ -19,4 +12,5 @@ extension FieldKey {
     static let status = FieldKey("status")
     static let color = FieldKey("color")
     static let rescueDate = FieldKey("rescueDate")
+    static let code = FieldKey("code")
 }
