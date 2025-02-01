@@ -2,11 +2,11 @@ import Fluent
 import Vapor
 
 func routes(_ app: Application) throws {
-    let authController = AuthController()
     
-    let protectedRoutes = app.grouped(MockAuthMiddleware())
+    try app.register(collection: AuthController())
     
-    try protectedRoutes.register(collection: authController)
+    let protectedRoutes = app.grouped(JWTMiddleware())
+    
     try protectedRoutes.register(collection: PetsController())
     try protectedRoutes.register(collection: SheltersController())
 }

@@ -6,12 +6,15 @@ final class User: Model, Content, Authenticatable, @unchecked Sendable {
 
     @ID(key: .id)
     var id: UUID?
+    
+    @Field(key: "appleUserID")
+    var appleUserID: String
 
     @Field(key: "name")
     var name: String
 
     @Field(key: "email")
-    var email: String
+    var email: String?
 
     @Enum(key: "role")
     var role: UserRole
@@ -27,8 +30,9 @@ final class User: Model, Content, Authenticatable, @unchecked Sendable {
 
     init() {}
 
-    init(id: UUID? = nil, name: String, email: String, role: UserRole, shelterID: UUID? = nil) {
+    init(id: UUID? = nil, appleUserID: String, name: String, email: String, role: UserRole, shelterID: UUID? = nil) {
         self.id = id
+        self.appleUserID = appleUserID
         self.name = name
         self.email = email
         self.role = role

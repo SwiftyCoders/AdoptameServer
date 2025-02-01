@@ -1,13 +1,13 @@
 {
-  "originHash" : "a171994d89c9f190a09aac31c15d39c3c157ffc0715be8ce85e62a301a8ca4eb",
+  "originHash" : "cc0758bec5384dae6a972756d9c406f651665ce92176c3f407b30f6f7dbe116d",
   "pins" : [
     {
       "identity" : "async-http-client",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/swift-server/async-http-client.git",
       "state" : {
-        "revision" : "2119f0d9cc1b334e25447fe43d3693c0e60e6234",
-        "version" : "1.24.0"
+        "revision" : "60fa3dcfc52d09ed0411e9c4bc99928bf63656bd",
+        "version" : "1.24.2"
       }
     },
     {
@@ -42,8 +42,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/vapor/fluent-kit.git",
       "state" : {
-        "revision" : "260eff94b64bed4920fa0a1a61ad42c1003fde6a",
-        "version" : "1.50.0"
+        "revision" : "153c495198ad29508e9c89baf87cbfda798c5338",
+        "version" : "1.50.1"
       }
     },
     {
@@ -53,6 +53,24 @@
       "state" : {
         "revision" : "fd57101e426d3edf66a32ba63a7d0b8ced4d7499",
         "version" : "2.10.0"
+      }
+    },
+    {
+      "identity" : "jwt",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/vapor/jwt.git",
+      "state" : {
+        "revision" : "af1c59762d70d1065ddbc0d7902ea9b3dacd1a26",
+        "version" : "5.1.2"
+      }
+    },
+    {
+      "identity" : "jwt-kit",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/vapor/jwt-kit.git",
+      "state" : {
+        "revision" : "03f5013f0b547ce43abe45e7e90711303a3e5495",
+        "version" : "5.1.2"
       }
     },
     {
@@ -155,6 +173,15 @@
       }
     },
     {
+      "identity" : "swift-certificates",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-certificates.git",
+      "state" : {
+        "revision" : "274f8668d3ec5d2892904d8465635c5ea659f767",
+        "version" : "1.7.0"
+      }
+    },
+    {
       "identity" : "swift-collections",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-collections.git",
@@ -213,8 +240,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-nio.git",
       "state" : {
-        "revision" : "ba72f31e11275fc5bf060c966cf6c1f36842a291",
-        "version" : "2.79.0"
+        "revision" : "dff45738d84a53dbc8ee899c306b3a7227f54f89",
+        "version" : "2.80.0"
       }
     },
     {
@@ -249,8 +276,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-nio-transport-services.git",
       "state" : {
-        "revision" : "bbd5e63cf949b7db0c9edaf7a21e141c52afe214",
-        "version" : "1.23.0"
+        "revision" : "3c394067c08d1225ba8442e9cffb520ded417b64",
+        "version" : "1.23.1"
       }
     },
     {
