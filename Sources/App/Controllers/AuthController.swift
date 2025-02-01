@@ -36,7 +36,7 @@ struct AuthController: RouteCollection {
                 throw Abort(.internalServerError, reason: "User creation failed")
             }
             
-            let payload = ExamplePayload(
+            let payload = AuthPayload(
                 sub: SubjectClaim(value: try authenticatedUser.requireID().uuidString),
                 exp: .init(value: .distantFuture)
             )
@@ -74,7 +74,7 @@ struct TokenResponse: Content {
     let token: String
 }
 
-struct ExamplePayload: JWTPayload {
+struct AuthPayload: JWTPayload {
     var sub: SubjectClaim
     var exp: ExpirationClaim
 

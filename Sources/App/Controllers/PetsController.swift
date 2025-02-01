@@ -6,9 +6,8 @@ struct PetsController: RouteCollection {
         let pets = routes.grouped("pets")
         pets.get(use: getAllPets)
         pets.delete(":petID", use: deletePet)
-        
-        //TODO: Shelter or Pet Controller?
         pets.post("newPet", use: addPet)
+        pets.put("updatePet", ":petID", use: updatePet)
         
     }
     
@@ -30,13 +29,12 @@ struct PetsController: RouteCollection {
         
         //guard let userID = user.id else { throw Abort(.notFound, reason: "UserID Not found")}
         
-        let userShelter = try await User.query(on: req.db)
-            .filter(\User.$id == UUID(uuidString: "e35be625-06c2-4425-87de-c9ec197cb9e6")!)
-            .with(\.$shelter)
-            .first()
+//        let userShelter = try await User.query(on: req.db)
+//            .filter(\User.$id == UUID(uuidString: "e35be625-06c2-4425-87de-c9ec197cb9e6")!)
+//            .with(\.$shelter)
+//            .first()
                 
-        guard let user = userShelter,
-              let shelterID = user.shelter?.id else {
+        guard let shelterID = user.$shelter.id else {
             throw Abort(.notFound, reason: "ShelterID not found")
         }
         
@@ -57,7 +55,6 @@ struct PetsController: RouteCollection {
         } catch {
             throw Abort(.notFound)
         }
-        
     }
     
     @Sendable
@@ -76,7 +73,31 @@ struct PetsController: RouteCollection {
     
     @Sendable
     func updatePet(req: Request) async throws -> HTTPStatus {
-        .ok
+        guard let petID = req.parameters.get("petID", as: UUID.self) else {
+            throw Abort(.badRequest, reason: "Invalid petID")
+        }
+        
+        guard let pet = try await Pet.find(petID, on: req.db) else {
+            throw Abort(.notFound, reason: "Pet not found")
+        }
+        
+        let updatedPet = Pet(
+            shelterID: pet.shelter.id!,
+            name: pet.name,
+            description: pet.description,
+            species: pet.species,
+            size: pet.size,
+            adoptionStatus: pet.adoptionStatus,
+            latitude: pet.latitude,
+            longitude: pet.longitude
+        )
+        
+        do {
+            try await updatedPet.save(on: req.db)
+            return .ok
+        } catch {
+            throw Abort(.badRequest, reason: "Cannot update Pet")
+        }
     }
 }
 

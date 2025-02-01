@@ -33,14 +33,14 @@ struct SheltersController: RouteCollection {
     
     @Sendable
     func createShelter(req: Request) async throws -> HTTPStatus {
-        let newShelter = try req.content.decode(Shelter.self)
         let user = try req.auth.require(User.self)
+        let newShelter = try req.content.decode(Shelter.self)
         
         do {
             try await newShelter.save(on: req.db)
-            
-            //vincular el shelterID creado -> User
-            
+            user.$shelter.id = newShelter.id
+            try await user.save(on: req.db)
+                        
             return .created
         } catch {
             throw Abort(.notAcceptable, reason: "cannot create new shelter")
