@@ -5,6 +5,19 @@ struct AuthController: RouteCollection {
     func boot(routes: any RoutesBuilder) throws {
         let authRoute = routes.grouped("auth")
         authRoute.post("apple", use: signInWithApple)
+        authRoute.post("user", use: registerUser)
+    }
+    
+    @Sendable
+    func registerUser(req: Request) async throws -> String {
+        do {
+            let user = try req.content.decode(User.self)
+            try await user.save(on: req.db)
+            return "miultracodigosecreto"
+        } catch {
+            print("SOY YO EL error: \(error)")
+            throw Abort(.unauthorized, reason: "no se ha podido crear el user")
+        }
     }
     
     @Sendable

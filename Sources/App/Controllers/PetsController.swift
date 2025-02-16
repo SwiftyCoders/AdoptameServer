@@ -4,11 +4,12 @@ import Vapor
 struct PetsController: RouteCollection {
     func boot(routes: RoutesBuilder) throws {
         let pets = routes.grouped("pets")
-        pets.get(use: getAllPets)
-        pets.delete(":petID", use: deletePet)
-        pets.post("newPet", use: addPet)
-        pets.put("updatePet", ":petID", use: updatePet)
-        
+        pets.get(use: getAllPets) // GET /pets
+        pets.post(use: addPet) // POST /pets
+//        pets.delete(":petID", use: deletePet) // DELETE /pets/:petID
+//        pets.get(":petID", use: petByID)
+        //pets.put(":petID", use: replacePet)  // PUT /pets/:petID
+        //pets.patch(":petID", use: updatePet) // PATCH /pets/:petID
     }
     
     @Sendable
@@ -22,8 +23,21 @@ struct PetsController: RouteCollection {
     }
     
     @Sendable
+    func petByID(req: Request) async throws -> Pet {
+        guard let petID = req.parameters.get("petID", as: UUID.self) else {
+            throw Abort(.badRequest, reason: "Invalid petID")
+        }
+        
+        guard let pet = try await Pet.find(petID, on: req.db) else {
+            throw Abort(.notFound, reason: "Pet not found")
+        }
+        
+        return pet
+    }
+    
+    @Sendable
     func addPet(req: Request) async throws -> HTTPStatus {
-        let user = try req.auth.require(User.self) //PACO -> AMIGO ANIMAL
+//        let user = try req.auth.require(User.self) //PACO -> AMIGO ANIMAL
         
         let pet = try req.content.decode(PetDTO.self) // Luna
         
@@ -34,13 +48,13 @@ struct PetsController: RouteCollection {
 //            .with(\.$shelter)
 //            .first()
                 
-        guard let shelterID = user.$shelter.id else {
-            throw Abort(.notFound, reason: "ShelterID not found")
-        }
+//        guard let shelterID = user.$shelter.id else {
+//            throw Abort(.notFound, reason: "ShelterID not found")
+//        }
         
         do {
             let dbPet = Pet(
-                shelterID: shelterID,
+                shelterID: UUID(uuidString: "ebb67d7b-08c0-4c44-a967-814201e64c1b")!,
                 name: pet.name,
                 description: pet.description,
                 species: pet.species,
@@ -53,7 +67,7 @@ struct PetsController: RouteCollection {
             try await dbPet.save(on: req.db)
             return .created
         } catch {
-            throw Abort(.notFound)
+            throw Abort(.notFound, reason: error.localizedDescription)
         }
     }
     
