@@ -36,7 +36,9 @@ struct SheltersController: RouteCollection {
     func createShelter(req: Request) async throws -> HTTPStatus {
         //let user = try req.auth.require(User.self)
         guard let userOne = try await User.query(on: req.db)
-            .first() else { throw Abort(.badRequest) }
+            .first() else { throw Abort(.unauthorized) }
+        
+        guard let userShelterID = userOne.shelterID else {throw Abort(.notAcceptable, reason: "El usuario necesita un shelterID para crear el shelter")}
         
         let newShelter = try req.content.decode(ShelterDTO.self)
         
@@ -47,7 +49,7 @@ struct SheltersController: RouteCollection {
         guard let imageBase64 = newShelter.image else {
             throw Abort(.badRequest, reason: "Image is required")
         }
-
+    
         let base64String = imageBase64.replacingOccurrences(of: "data:image/jpeg;base64,", with: "")
         
         guard let imageData = Data(base64Encoded: base64String) else {
@@ -65,11 +67,13 @@ struct SheltersController: RouteCollection {
                 at: filePath
         )
         
-        let finalShelter = Shelter(name: newShelter.name, contactEmail: newShelter.contactEmail, latitude: newShelter.latitude, longitude: newShelter.longitude, imageURL: fileURLPath)
+        guard let userShelter = userOne.shelterID else { throw Abort(.conflict) }
+        
+        let finalShelter = Shelter(name: newShelter.name, contactEmail: newShelter.contactEmail, latitude: newShelter.latitude, longitude: newShelter.longitude, ownerID: userShelter, imageURL: fileURLPath)
         
         do {
             try await finalShelter.save(on: req.db)
-            userOne.$shelter.id = finalShelter.id
+            userOne.$shelterID.value = finalShelter.id
             try await userOne.save(on: req.db)
             
             return .created
@@ -82,7 +86,7 @@ struct SheltersController: RouteCollection {
     func updateShelter(req: Request) async throws -> Shelter {
         let user = try req.auth.require(User.self)
 
-        guard user.role == .shelter, let shelterID = user.$shelter.id else {
+        guard user.role == .shelter, let shelterID = user.$shelterID.value else {
             throw Abort(.forbidden, reason: "Only shelters can update their profile")
         }
         
@@ -135,13 +139,13 @@ struct SheltersController: RouteCollection {
     func getAllPetsFromShelter(req: Request) async throws -> [Pet] {
         let user = try req.auth.require(User.self)
         
-        guard let shelterID = user.$shelter.id else {
+        guard let shelterID = user.$shelterID.value else {
             throw Abort(.notFound, reason: "Shelter ID not valid")
         }
         
         do {
             return try await Pet.query(on: req.db)
-                .filter(\.$shelter.$id == shelterID)
+                .filter(\.$shelter.$id == shelterID ?? UUID())
                 .all()
         } catch {
             throw Abort(.notFound, reason: "Not pets found on \(user.name) shelter")

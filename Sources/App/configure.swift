@@ -27,9 +27,9 @@ public func configure(_ app: Application) async throws {
         throw Abort(.internalServerError, reason: "Database not configured.")
     }
 
+    app.migrations.add(UsersMigration())
     app.migrations.add(ShelterCodesMigration())
     app.migrations.add(SheltersMigration())
-    app.migrations.add(UsersMigration())
     app.migrations.add(PetsMigration())
 
     app.views.use(.leaf)
