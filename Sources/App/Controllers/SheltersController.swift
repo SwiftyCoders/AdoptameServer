@@ -1,26 +1,65 @@
 import Vapor
+import JWT
 import Fluent
 
 struct SheltersController: RouteCollection {
     func boot(routes: RoutesBuilder) throws {
         let shelters = routes.grouped("shelters")
-        shelters.get(use: getAllShelters) // GET /shelters
-        shelters.get(":id", use: getShelterByID) // GET /shelters/:id
-        shelters.post(use: createShelter) // POST /shelters
-        //shelters.put(":id", use: replaceShelter) // PUT /shelters/:id
-        shelters.patch(":id", use: updateShelter) // PATCH /shelters/:id
-        //shelters.get(":id/pets", use: getAllPetsFromShelter) // GET /shelters/:id/pets
-        shelters.delete(":id", use: deleteShelter) // DELETE /shelters/:id
+        let tokenProtected = shelters.grouped(UserAuthenticator())
+        
+        shelters.get(use: getAllShelters)
+        shelters.get(":id", use: getShelterByID)
+        tokenProtected.post(use: createShelter)
+        shelters.patch(":id", use: updateShelter)
+        shelters.delete(":id", use: deleteShelter)
+        tokenProtected.get("byDistance", use: getSheltersByDistance)
+    }
+    
+    @Sendable
+    func getSheltersByDistance(req: Request) async throws -> [Pet] {
+        guard let userLat = req.query[Double.self, at: "lat"],
+              let userLon = req.query[Double.self, at: "lon"] else {
+            throw Abort(.badRequest, reason: "Se requieren los parámetros 'lat' y 'lon'.")
+        }
+        
+        let radius: Double = req.query[Double.self, at: "radius"] ?? 5000
+        
+        return try await Pet.query(on: req.db)
+            .all()
+            .map { pet -> (Pet, Double) in
+                let petLat = pet.latitude
+                let petLon = pet.longitude
+                
+                let earthRadius = 6371000.0
+                
+                let latDiff = (petLat - userLat) * .pi / 180
+                let lonDiff = (petLon - userLon) * .pi / 180
+                let lat1 = userLat * .pi / 180
+                let lat2 = petLat * .pi / 180
+                
+                let a = sin(latDiff/2) * sin(latDiff/2) +
+                cos(lat1) * cos(lat2) *
+                sin(lonDiff/2) * sin(lonDiff/2)
+                let c = 2 * atan2(sqrt(a), sqrt(1-a))
+                let distance = earthRadius * c
+                
+                return (pet, distance)
+            }
+            .filter { _, distance in
+                distance <= radius
+            }
+            .sorted { $0.1 < $1.1 }
+            .map { $0.0 }
     }
     
     @Sendable
     func getAllShelters(req: Request) async throws -> [Shelter] {
-         do {
+        do {
             return try await Shelter.query(on: req.db)
                 .all()
-         } catch {
-             return []
-         }
+        } catch {
+            return []
+        }
     }
     
     @Sendable
@@ -34,58 +73,64 @@ struct SheltersController: RouteCollection {
     
     @Sendable
     func createShelter(req: Request) async throws -> HTTPStatus {
-        //let user = try req.auth.require(User.self)
-        guard let userOne = try await User.query(on: req.db)
-            .first() else { throw Abort(.unauthorized) }
-        
-        guard let userShelterID = userOne.shelterID else {throw Abort(.notAcceptable, reason: "El usuario necesita un shelterID para crear el shelter")}
-        
-        let newShelter = try req.content.decode(ShelterDTO.self)
-        
-        let fileName = "\(UUID().uuidString).jpg"
-        let filePath = "Public/uploads/\(fileName)"
-        let fileURLPath = "uploads/\(fileName)"
-        
-        guard let imageBase64 = newShelter.image else {
-            throw Abort(.badRequest, reason: "Image is required")
-        }
-    
-        let base64String = imageBase64.replacingOccurrences(of: "data:image/jpeg;base64,", with: "")
-        
-        guard let imageData = Data(base64Encoded: base64String) else {
-            throw Abort(.badRequest, reason: "Invalid image data")
-        }
-        
-        try FileManager.default.createDirectory(
-                atPath: "Public/uploads",
-                withIntermediateDirectories: true,
-                attributes: nil
-            )
-                
-        try await req.fileio.writeFile(
-                ByteBuffer(data: imageData),
-                at: filePath
-        )
-        
-        guard let userShelter = userOne.shelterID else { throw Abort(.conflict) }
-        
-        let finalShelter = Shelter(name: newShelter.name, contactEmail: newShelter.contactEmail, latitude: newShelter.latitude, longitude: newShelter.longitude, ownerID: userShelter, imageURL: fileURLPath)
-        
-        do {
-            try await finalShelter.save(on: req.db)
-            userOne.$shelterID.value = finalShelter.id
-            try await userOne.save(on: req.db)
-            
-            return .created
-        } catch {
-            throw Abort(.notAcceptable, reason: "cannot create new shelter")
-        }
+        let user = try req.auth.require(User.self)
+
+           if user.shelterID != nil {
+               throw Abort(.conflict, reason: "User already has a shelter assigned")
+           }
+
+           let newShelter = try req.content.decode(ShelterDTO.self)
+
+           let fileName = "\(UUID().uuidString).jpg"
+           let filePath = "Public/uploads/\(fileName)"
+           let fileURLPath = "uploads/\(fileName)"
+
+           guard let imageBase64 = newShelter.image else {
+               throw Abort(.badRequest, reason: "Image is required")
+           }
+
+           let base64String = imageBase64.replacingOccurrences(of: "data:image/jpeg;base64,", with: "")
+           guard let imageData = Data(base64Encoded: base64String) else {
+               throw Abort(.badRequest, reason: "Invalid image data")
+           }
+
+           try FileManager.default.createDirectory(
+               atPath: "Public/uploads",
+               withIntermediateDirectories: true,
+               attributes: nil
+           )
+
+           try await req.fileio.writeFile(
+               ByteBuffer(data: imageData),
+               at: filePath
+           )
+
+           let finalShelter = Shelter(
+               name: newShelter.name,
+               contactEmail: newShelter.contactEmail,
+               latitude: newShelter.latitude,
+               longitude: newShelter.longitude,
+               ownerID: user.id!,
+               imageURL: fileURLPath
+           )
+
+           do {
+               try await finalShelter.save(on: req.db)
+
+               user.shelterID = finalShelter.id
+               user.role = .shelter
+               try await user.save(on: req.db)
+
+               return .created
+           } catch {
+               throw Abort(.notAcceptable, reason: "Cannot create new shelter")
+           }
     }
     
     @Sendable
     func updateShelter(req: Request) async throws -> Shelter {
         let user = try req.auth.require(User.self)
-
+        
         guard user.role == .shelter, let shelterID = user.$shelterID.value else {
             throw Abort(.forbidden, reason: "Only shelters can update their profile")
         }
@@ -119,7 +164,7 @@ struct SheltersController: RouteCollection {
             .filter(\.$id == id)
             .first() else {
             throw Abort(.notFound, reason: "Not shelter found with this ID")
-            }
+        }
         
         if let imageURL = shelter.imageURL {
             let filePath = "\(imageURL)"

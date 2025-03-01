@@ -1,45 +1,6 @@
 import Vapor
 import Fluent
 
-//final class User: Model, Content, Authenticatable, @unchecked Sendable {
-//    static let schema = "users"
-//
-//    @ID(key: .id)
-//    var id: UUID?
-//    
-//    @Field(key: "appleUserID")
-//    var appleUserID: String
-//
-//    @Field(key: "name")
-//    var name: String
-//
-//    @Field(key: "email")
-//    var email: String?
-//
-//    @Enum(key: "role")
-//    var role: UserRole
-//
-//    @OptionalParent(key: "shelterID")
-//    var shelter: Shelter?
-//
-//    @Timestamp(key: "createdAt", on: .create)
-//    var createdAt: Date?
-//
-//    @Timestamp(key: "updatedAt", on: .update)
-//    var updatedAt: Date?
-//
-//    init() {}
-//
-//    init(id: UUID? = nil, appleUserID: String, name: String, email: String, role: UserRole, shelterID: UUID? = nil) {
-//        self.id = id
-//        self.appleUserID = appleUserID
-//        self.name = name
-//        self.email = email
-//        self.role = role
-//        self.$shelter.id = shelterID
-//    }
-//}
-
 final class User: Model, Content, Authenticatable, @unchecked Sendable {
     static let schema = "users"
     
@@ -103,10 +64,12 @@ final class User: Model, Content, Authenticatable, @unchecked Sendable {
     }
     
     struct Create: Content, Validatable {
+        var name: String
         var email: String
         var password: String
         
         static func validations(_ validations: inout Validations) {
+            validations.add("name", as: String.self, is: .alphanumeric)
             validations.add("email", as: String.self, is: .email)
             validations.add("password", as: String.self, is: .count(4...))
         }

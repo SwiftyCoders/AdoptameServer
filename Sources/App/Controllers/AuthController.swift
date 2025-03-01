@@ -2,12 +2,49 @@ import Vapor
 import JWT
 import Fluent
 
+struct UserAuthenticator: AsyncMiddleware {
+    func respond(to request: Request, chainingTo next: AsyncResponder) async throws -> Response {
+        guard let token = request.headers.bearerAuthorization?.token else {
+            return try await next.respond(to: request)
+        }
+        
+        print(token)
+        
+        guard let keys = request.application.storage[JWTKeysStorageKey.self] else {
+            throw Abort(.internalServerError, reason: "JWTKeyCollection no configurada")
+        }
+        
+        do {
+            print("🔍 Verificando token: \(token)")
+            let payload = try await keys.verify(token, as: UserPayload.self)
+            print("✅ Token verificado, userID: \(payload.userID)")
+
+            guard let user = try await User.find(payload.userID, on: request.db) else {
+                print("⚠️ No se encontró el usuario en la DB")
+                throw Abort(.unauthorized, reason: "Invalid token: user not found")
+            }
+
+            print("✅ Usuario autenticado: \(user.email)")
+            print(token)
+            request.auth.login(user)
+            return try await next.respond(to: request)
+        } catch {
+            print("❌ Error verificando el token: \(error)")
+            throw Abort(.unauthorized, reason: "Invalid token")
+        }
+    }
+}
+
 struct AuthController: RouteCollection {
     func boot(routes: any RoutesBuilder) throws {
         let authRoute = routes.grouped("auth")
         authRoute.post("create", use: createUser)
         authRoute.post("apple", use: signInWithApple)
         authRoute.post("login", use: loginUser)
+        
+        let protectedRoutes = authRoute.grouped(UserAuthenticator())
+        protectedRoutes.get(use: getUser)
+        protectedRoutes.post("update", use: updateUser)
     }
     
     @Sendable
@@ -22,7 +59,7 @@ struct AuthController: RouteCollection {
         } else {
             let user = User(
                 appleUserID: "",
-                name: "",
+                name: create.name,
                 email: create.email,
                 password: try Bcrypt.hash(create.password),
                 role: .adopter
@@ -34,27 +71,46 @@ struct AuthController: RouteCollection {
     }
     
     @Sendable
+    func updateUser(req: Request) async throws -> HTTPStatus {
+        let user = try req.auth.require(User.self)
+        
+        let updatedUser = try req.content.decode(User.Create.self)
+        
+        user.name = updatedUser.name
+        user.email = updatedUser.email
+        user.password = try Bcrypt.hash(updatedUser.password)
+        
+        do {
+            try await user.save(on: req.db)
+            return .created
+        } catch {
+            throw Abort(.badRequest, reason: "User cannot be updated")
+        }
+    }
+    
+    @Sendable
     func loginUser(req: Request) async throws -> TokenResponse {
         let loginData = try req.content.decode(LoginRequest.self)
         
         guard let user = try await User.query(on: req.db)
             .filter(\.$email == loginData.email)
             .first() else {
-            throw Abort(.unauthorized, reason: "Invalid email or password")
+            throw Abort(.unauthorized, reason: "Invalid credentials")
         }
         
         guard try Bcrypt.verify(loginData.password, created: user.password) else {
-            throw Abort(.unauthorized, reason: "Invalid email or password")
+            throw Abort(.unauthorized, reason: "Invalid credentials")
         }
         
         guard let keys = req.application.storage[JWTKeysStorageKey.self] else {
             throw Abort(.internalServerError, reason: "JWTKeyCollection no configurada")
         }
         
-        guard let userID = user.id else { throw Abort(.unauthorized, reason: "userID not found") }
+        guard let userID = user.id else {
+            throw Abort(.unauthorized, reason: "Invalid credentials")
+        }
         
-        //caducidad 1 hora
-        let payload = UserPayload(userID: userID, exp: .init(value: Date().addingTimeInterval(3600)))
+        let payload = UserPayload(userID: userID, exp: .init(value: Date().addingTimeInterval(86400)))
         
         let token = try await keys.sign(payload)
         
@@ -105,16 +161,19 @@ struct AuthController: RouteCollection {
     
     @Sendable
     func getUser(req: Request) async throws -> User {
-        guard let bearer = req.headers.bearerAuthorization else {
-            throw Abort(.unauthorized, reason: "No token provided")
-        }
-
-        let payload = try await req.jwt.verify(bearer.token, as: UserPayload.self)
+        let user = try req.auth.require(User.self)
+//        guard let bearer = req.headers.bearerAuthorization else {
+//            throw Abort(.unauthorized, reason: "No token provided")
+//        }
+//
+//        let payload = try await req.jwt.verify(bearer.token, as: UserPayload.self)
+//        
+//        guard let user = try await User.find(payload.userID, on: req.db) else {
+//            throw Abort(.unauthorized, reason: "Usuario no encontrado")
+//        }
+//        req.auth.login(user)
         
-        guard let user = try await User.find(payload.userID, on: req.db) else {
-            throw Abort(.unauthorized, reason: "Usuario no encontrado")
-        }
-        req.auth.login(user)
+        print(user.role)
         
         return user
     }
@@ -161,3 +220,4 @@ struct LoginRequest: Content {
     let email: String
     let password: String
 }
+
