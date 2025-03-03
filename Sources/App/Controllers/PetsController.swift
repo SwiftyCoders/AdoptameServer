@@ -57,7 +57,7 @@ struct PetsController: RouteCollection {
             return try await Pet.query(on: req.db)
                 .all()
         } catch {
-            return []
+            throw Abort(.badRequest, reason: "ERROR AL OBTENER TODOS LOS PETS")
         }
     }
     
@@ -101,44 +101,125 @@ struct PetsController: RouteCollection {
         return pet
     }
     
-    @Sendable
+//    @Sendable
+//    func addPet(req: Request) async throws -> HTTPStatus {
+//        let user = try req.auth.require(User.self)
+//        
+//        let pet = try req.content.decode(PetDTO.self)
+//        
+//        let fileName = "\(UUID().uuidString).jpg"
+//        let filePath = "Public/pets/\(fileName)"
+//        let fileURLPath = "pets/\(fileName)"
+//
+//        guard let imagesBase64 = pet.images else {
+//            throw Abort(.badRequest, reason: "Image is required")
+//        }
+//
+//        for image in imagesBase64 {
+//            let fileName = "\(UUID().uuidString).jpg"
+//            let filePath = "Public/pets/\(fileName)"
+//            let fileURLPath = "pets/\(fileName)"
+//
+//            let base64String = image.replacingOccurrences(of: "data:image/jpeg;base64,", with: "")
+//            guard let imageData = Data(base64Encoded: base64String) else {
+//                throw Abort(.badRequest, reason: "Invalid image data")
+//            }
+//
+//            try FileManager.default.createDirectory(
+//                atPath: "Public/uploads",
+//                withIntermediateDirectories: true,
+//                attributes: nil
+//            )
+//
+//            try await req.fileio.writeFile(
+//                ByteBuffer(data: imageData),
+//                at: filePath
+//            )
+//        }
+//        
+//        guard let userShelterID = user.shelterID else { throw Abort(.notFound, reason: "User shelter ID Not found") }
+//        
+//        
+//        guard let userShelter = try await Shelter.query(on: req.db)
+//            .filter(\Shelter.$id == userShelterID)
+//            .first() else {
+//            throw Abort(.notFound, reason: "User Shelter Not found")
+//        }
+//        
+//        guard let shelterID = user.shelterID else {
+//            throw Abort(.notFound, reason: "ShelterID not found")
+//        }
+//        
+//        do {
+//            let dbPet = Pet(
+//                shelterID: shelterID,
+//                name: pet.name,
+//                age: pet.age,
+//                description: pet.description,
+//                personality: pet.personality,
+//                idealHome: pet.idealHome,
+//                medicalCondition: pet.medicalCondition,
+//                adoptionInfo: pet.adoptionInfo,
+//                species: pet.species,
+//                breed: pet.breed,
+//                size: pet.size,
+//                gender: pet.gender,
+//                adoptionStatus: pet.adoptionStatus,
+//                imageURLs: [fileURLPath],
+//                latitude: userShelter.latitude,
+//                longitude: userShelter.longitude
+//            )
+//            
+//            
+//            try await dbPet.save(on: req.db)
+//            return .created
+//        } catch {
+//            print(String(reflecting: error))
+//            throw Abort(.badRequest, reason: "Cannot create new pet for shelter \(userShelter.name)")
+//        }
+//    }
     func addPet(req: Request) async throws -> HTTPStatus {
         let user = try req.auth.require(User.self)
         
         let pet = try req.content.decode(PetDTO.self)
         
-        let fileName = "\(UUID().uuidString).jpg"
-        let filePath = "Public/pets/\(fileName)"
-        let fileURLPath = "pets/\(fileName)"
-
         guard let imagesBase64 = pet.images else {
             throw Abort(.badRequest, reason: "Image is required")
         }
-
+        
+        // Array para almacenar todas las URLs de imágenes
+        var imageURLs: [String] = []
+        
+        // Asegúrate de que el directorio exista
+        try FileManager.default.createDirectory(
+            atPath: "Public/pets",
+            withIntermediateDirectories: true,
+            attributes: nil
+        )
+        
+        // Procesa cada imagen
         for image in imagesBase64 {
             let fileName = "\(UUID().uuidString).jpg"
             let filePath = "Public/pets/\(fileName)"
             let fileURLPath = "pets/\(fileName)"
-
+            
             let base64String = image.replacingOccurrences(of: "data:image/jpeg;base64,", with: "")
             guard let imageData = Data(base64Encoded: base64String) else {
                 throw Abort(.badRequest, reason: "Invalid image data")
             }
-
-            try FileManager.default.createDirectory(
-                atPath: "Public/uploads",
-                withIntermediateDirectories: true,
-                attributes: nil
-            )
-
+            
             try await req.fileio.writeFile(
                 ByteBuffer(data: imageData),
                 at: filePath
             )
+            
+            // Añade la URL al array
+            imageURLs.append(fileURLPath)
         }
         
-        guard let userShelterID = user.shelterID else { throw Abort(.notFound, reason: "User shelter ID Not found") }
-        
+        guard let userShelterID = user.shelterID else {
+            throw Abort(.notFound, reason: "User shelter ID Not found")
+        }
         
         guard let userShelter = try await Shelter.query(on: req.db)
             .filter(\Shelter.$id == userShelterID)
@@ -146,13 +227,9 @@ struct PetsController: RouteCollection {
             throw Abort(.notFound, reason: "User Shelter Not found")
         }
         
-        guard let shelterID = user.shelterID else {
-            throw Abort(.notFound, reason: "ShelterID not found")
-        }
-        
         do {
             let dbPet = Pet(
-                shelterID: shelterID,
+                shelterID: userShelterID,
                 name: pet.name,
                 age: pet.age,
                 description: pet.description,
@@ -165,11 +242,10 @@ struct PetsController: RouteCollection {
                 size: pet.size,
                 gender: pet.gender,
                 adoptionStatus: pet.adoptionStatus,
-                imageURLs: [fileURLPath],
+                imageURLs: imageURLs,  // Ahora guardamos todas las URLs
                 latitude: userShelter.latitude,
                 longitude: userShelter.longitude
             )
-            
             
             try await dbPet.save(on: req.db)
             return .created
