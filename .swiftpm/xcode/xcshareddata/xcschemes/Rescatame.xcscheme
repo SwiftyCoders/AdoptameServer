@@ -67,12 +67,12 @@
          <EnvironmentVariable
             key = "DATABASE_URL"
             value = "postgres://rescatameuser:R3sc4t4m3DB@192.168.5.45:56000/rescatamedb"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </EnvironmentVariable>
          <EnvironmentVariable
             key = "JWT_SECRET"
             value = "R3SCU3_S3RV3R"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </EnvironmentVariable>
       </EnvironmentVariables>
    </LaunchAction>
