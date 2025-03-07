@@ -24,7 +24,7 @@ struct UserAuthenticator: AsyncMiddleware {
                 throw Abort(.unauthorized, reason: "Invalid token: user not found")
             }
 
-            print("✅ Usuario autenticado: \(user.email)")
+            print("✅ Usuario autenticado: \(String(describing: user.email))")
             print(token)
             request.auth.login(user)
             return try await next.respond(to: request)

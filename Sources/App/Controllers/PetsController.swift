@@ -13,6 +13,7 @@ struct PetsController: RouteCollection {
         tokenProtected.get("shelter", use: getPetsFromShelter)
         tokenProtected.get(":specie", use: getPetsBySpecie)
         tokenProtected.get("byDistance", use: getPetsByDistance)
+        tokenProtected.get(":petID", use: petByID)
     }
     
     @Sendable
