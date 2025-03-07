@@ -10,10 +10,10 @@ struct PetsController: RouteCollection {
         pets.get(use: getAllPets)
         tokenProtected.post(use: createPet)
         tokenProtected.delete(":petID", use: deletePetByID)
-        tokenProtected.get("shelter", use: getPetsFromShelter)
-        tokenProtected.get(":specie", use: getPetsBySpecie)
-        tokenProtected.get("byDistance", use: getPetsByDistance)
+        tokenProtected.get("species", ":specie", use: getPetsBySpecie)
         tokenProtected.get("pet", ":petID", use: petByID)
+        tokenProtected.get("shelter", use: getPetsFromShelter)
+        tokenProtected.get("byDistance", use: getPetsByDistance)
     }
     
     @Sendable
