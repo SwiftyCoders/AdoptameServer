@@ -8,16 +8,16 @@ struct PetsController: RouteCollection {
         let pets = routes.grouped("pets")
         let tokenProtected = pets.grouped(UserAuthenticator())
         pets.get(use: getAllPets)
-        tokenProtected.post(use: addPet)
-        tokenProtected.delete(":petID", use: deletePet)
+        tokenProtected.post(use: createPet)
+        tokenProtected.delete(":petID", use: deletePetByID)
         tokenProtected.get("shelter", use: getPetsFromShelter)
         tokenProtected.get(":specie", use: getPetsBySpecie)
         tokenProtected.get("byDistance", use: getPetsByDistance)
-        tokenProtected.get(":petID", use: petByID)
+        tokenProtected.get("pet", ":petID", use: petByID)
     }
     
     @Sendable
-    func addPet(req: Request) async throws -> HTTPStatus {
+    func createPet(req: Request) async throws -> HTTPStatus {
         let user = try req.auth.require(User.self)
         
         let pet = try req.content.decode(PetDTO.self)
@@ -91,7 +91,7 @@ struct PetsController: RouteCollection {
     }
     
     @Sendable
-    func deletePet(req: Request) async throws -> HTTPStatus {
+    func deletePetByID(req: Request) async throws -> HTTPStatus {
         guard let petID = req.parameters.get("petID", as: UUID.self) else {
             throw Abort(.badRequest, reason: "Invalid petID")
         }
