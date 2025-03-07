@@ -57,7 +57,7 @@ struct PetsController: RouteCollection {
             return try await Pet.query(on: req.db)
                 .all()
         } catch {
-            throw Abort(.badRequest, reason: "ERROR AL OBTENER TODOS LOS PETS")
+            throw Abort(.badRequest, reason: "ERROR AL OBTENER TODOS LOS PETS REAL")
         }
     }
     
