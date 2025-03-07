@@ -8,7 +8,7 @@ enum Entrypoint {
     static func main() async throws {
         var env = try Environment.detect()
         try LoggingSystem.bootstrap(from: &env)
-        print("HOLA SOY ENTRY POINT EL NUEVO")
+        print("HOLA SOY ENTRY POINT - PRUEBA DE CAMBIO BITO 7 marzo")
         let app = try await Application.make(env)
         
         do {
