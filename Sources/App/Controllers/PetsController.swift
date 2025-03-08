@@ -14,6 +14,7 @@ struct PetsController: RouteCollection {
         tokenProtected.get("pet", ":petID", use: petByID)
         tokenProtected.get("shelter", use: getPetsFromShelter)
         tokenProtected.get("byDistance", use: getPetsByDistance)
+        tokenProtected.get("byFilters", use: getPetsByFilter)
     }
     
     @Sendable
@@ -220,4 +221,35 @@ struct PetsController: RouteCollection {
         
         return pet
     }
+    
+    @Sendable
+    func getPetsByFilter(req: Request) async throws -> [Pet] {
+        let filter = try req.query.decode(PetFilterRequest.self)
+        let query = Pet.query(on: req.db)
+        
+        if let types = filter.types, !types.isEmpty {
+            query.filter(\Pet.$species ~~ types)
+        }
+        
+        if let gender = filter.gender {
+            query.filter(\Pet.$gender == gender)
+        }
+        
+        if let size = filter.size {
+            query.filter(\.$size == size)
+        }
+        
+        if let age = filter.age {
+            query.filter(\.$age == age)
+        }
+        
+        return try await query.all()
+    }
+}
+
+struct PetFilterRequest: Content {
+    var types: [Species]?
+    var gender: PetGender?
+    var size: PetSize?
+    var age: PetAge?
 }
