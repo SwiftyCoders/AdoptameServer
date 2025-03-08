@@ -16,7 +16,7 @@ struct SheltersController: RouteCollection {
     }
     
     @Sendable
-    func getSheltersByDistance(req: Request) async throws -> [Pet] {
+    func getSheltersByDistance(req: Request) async throws -> [Shelter] {
         guard let userLat = req.query[Double.self, at: "lat"],
               let userLon = req.query[Double.self, at: "lon"] else {
             throw Abort(.badRequest, reason: "Se requieren los parámetros 'lat' y 'lon'.")
@@ -24,11 +24,11 @@ struct SheltersController: RouteCollection {
         
         let radius: Double = req.query[Double.self, at: "radius"] ?? 5000
         
-        return try await Pet.query(on: req.db)
+        return try await Shelter.query(on: req.db)
             .all()
-            .map { pet -> (Pet, Double) in
-                let petLat = pet.latitude
-                let petLon = pet.longitude
+            .map { shelter -> (Shelter, Double) in
+                let petLat = shelter.latitude
+                let petLon = shelter.longitude
                 
                 let earthRadius = 6371000.0
                 
@@ -43,7 +43,7 @@ struct SheltersController: RouteCollection {
                 let c = 2 * atan2(sqrt(a), sqrt(1-a))
                 let distance = earthRadius * c
                 
-                return (pet, distance)
+                return (shelter, distance)
             }
             .filter { _, distance in
                 distance <= radius
