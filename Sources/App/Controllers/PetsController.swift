@@ -29,8 +29,9 @@ struct PetsController: RouteCollection {
         
         var imageURLs: [String] = []
         
+        let directory = req.application.directory.publicDirectory + "pets/"
         try FileManager.default.createDirectory(
-            atPath: "Public/pets",
+            atPath: directory,
             withIntermediateDirectories: true,
             attributes: nil
         )
@@ -40,7 +41,15 @@ struct PetsController: RouteCollection {
             let filePath = "Public/pets/\(fileName)"
             let fileURLPath = "pets/\(fileName)"
             
-            let base64String = image.replacingOccurrences(of: "data:image/jpeg;base64,", with: "")
+            let regex = try! NSRegularExpression(pattern: "^data:image\\/(jpeg|png);base64,", options: [])
+            let base64String = regex.stringByReplacingMatches(
+                in: image,
+                options: [],
+                range: NSRange(location: 0, length: image.count),
+                withTemplate: ""
+            )
+            
+            //let base64String = image.replacingOccurrences(of: "data:image/jpeg;base64,", with: "")
             guard let imageData = Data(base64Encoded: base64String) else {
                 throw Abort(.badRequest, reason: "Invalid image data")
             }
