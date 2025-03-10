@@ -81,29 +81,29 @@ struct SheltersController: RouteCollection {
 
            let newShelter = try req.content.decode(ShelterDTO.self)
 
-           let fileName = "\(UUID().uuidString).jpg"
-           let filePath = "Public/uploads/\(fileName)"
-           let fileURLPath = "uploads/\(fileName)"
-
-           guard let imageBase64 = newShelter.image else {
-               throw Abort(.badRequest, reason: "Image is required")
-           }
-
-           let base64String = imageBase64.replacingOccurrences(of: "data:image/jpeg;base64,", with: "")
-           guard let imageData = Data(base64Encoded: base64String) else {
-               throw Abort(.badRequest, reason: "Invalid image data")
-           }
-
-           try FileManager.default.createDirectory(
-               atPath: "Public/uploads",
-               withIntermediateDirectories: true,
-               attributes: nil
-           )
-
-           try await req.fileio.writeFile(
-               ByteBuffer(data: imageData),
-               at: filePath
-           )
+//           let fileName = "\(UUID().uuidString).jpg"
+//           let filePath = "Public/uploads/\(fileName)"
+//           let fileURLPath = "uploads/\(fileName)"
+//
+//           guard let imageBase64 = newShelter.image else {
+//               throw Abort(.badRequest, reason: "Image is required")
+//           }
+//
+//           let base64String = imageBase64.replacingOccurrences(of: "data:image/jpeg;base64,", with: "")
+//           guard let imageData = Data(base64Encoded: base64String) else {
+//               throw Abort(.badRequest, reason: "Invalid image data")
+//           }
+//
+//           try FileManager.default.createDirectory(
+//               atPath: "Public/uploads",
+//               withIntermediateDirectories: true,
+//               attributes: nil
+//           )
+//
+//           try await req.fileio.writeFile(
+//               ByteBuffer(data: imageData),
+//               at: filePath
+//           )
 
 //           let finalShelter = Shelter(
 //               name: newShelter.name,
