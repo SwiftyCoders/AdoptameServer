@@ -9,8 +9,7 @@ struct SheltersController: RouteCollection {
         
         shelters.get(use: getAllShelters)
         shelters.get(":id", use: getShelterByID)
-        //WARNING, CHANGE TO PROTECTED WHEN WORK
-        shelters.post(use: createShelter)
+        tokenProtected.post(use: createShelter)
         shelters.patch(":id", use: updateShelter)
         shelters.delete(":id", use: deleteShelter)
         tokenProtected.get("byDistance", use: getSheltersByDistance)
@@ -74,68 +73,66 @@ struct SheltersController: RouteCollection {
     
     @Sendable
     func createShelter(req: Request) async throws -> HTTPStatus {
-//        let user = try req.auth.require(User.self)
+        let user = try req.auth.require(User.self)
         
-//        if user.shelterID != nil {
-//            throw Abort(.conflict, reason: "User already has a shelter assigned")
+        if user.shelterID != nil {
+            throw Abort(.conflict, reason: "User already has a shelter assigned")
+        }
+        
+        let newShelter = try req.content.decode(ShelterDTO.self)
+        
+        let fileName = "\(UUID().uuidString).jpg"
+        let filePath = "Public/uploads/\(fileName)"
+        let fileURLPath = "uploads/\(fileName)"
+        
+//        guard let imageBase64 = newShelter.image else {
+//            throw Abort(.badRequest, reason: "Image is required")
 //        }
 //        
-//        let newShelter = try req.content.decode(ShelterDTO.self)
-        
-        //           let fileName = "\(UUID().uuidString).jpg"
-        //           let filePath = "Public/uploads/\(fileName)"
-        //           let fileURLPath = "uploads/\(fileName)"
-        //
-        //           guard let imageBase64 = newShelter.image else {
-        //               throw Abort(.badRequest, reason: "Image is required")
-        //           }
-        //
-        //           let base64String = imageBase64.replacingOccurrences(of: "data:image/jpeg;base64,", with: "")
-        //           guard let imageData = Data(base64Encoded: base64String) else {
-        //               throw Abort(.badRequest, reason: "Invalid image data")
-        //           }
-        //
-        //           try FileManager.default.createDirectory(
-        //               atPath: "Public/uploads",
-        //               withIntermediateDirectories: true,
-        //               attributes: nil
-        //           )
-        //
-        //           try await req.fileio.writeFile(
-        //               ByteBuffer(data: imageData),
-        //               at: filePath
-        //           )
-        
-        //           let finalShelter = Shelter(
-        //               name: newShelter.name,
-        //               contactEmail: newShelter.contactEmail,
-        //               latitude: newShelter.latitude,
-        //               longitude: newShelter.longitude,
-        //               ownerID: user.id!,
-        //               imageURL: fileURLPath
-        //           )
+//        let base64String = imageBase64.replacingOccurrences(of: "data:image/jpeg;base64,", with: "")
+//        guard let imageData = Data(base64Encoded: base64String) else {
+//            throw Abort(.badRequest, reason: "Invalid image data")
+//        }
+//        
+//        try FileManager.default.createDirectory(
+//            atPath: "Public/uploads",
+//            withIntermediateDirectories: true,
+//            attributes: nil
+//        )
+//        
+//        try await req.fileio.writeFile(
+//            ByteBuffer(data: imageData),
+//            at: filePath
+//        )
         
 //        let finalShelter = Shelter(
 //            name: newShelter.name,
 //            contactEmail: newShelter.contactEmail,
 //            latitude: newShelter.latitude,
 //            longitude: newShelter.longitude,
-//            ownerID: user.id!
+//            ownerID: user.id!,
+//            imageURL: fileURLPath
 //        )
         
-//        do {
-//            try await finalShelter.save(on: req.db)
-//            
-//            user.shelterID = finalShelter.id
-//            user.role = .shelter
-//            try await user.save(on: req.db)
-//            
-//            return .created
-//        } catch {
-//            throw Abort(.notAcceptable, reason: "Cannot create new shelter")
-//        }
+        let finalShelter = Shelter(
+            name: newShelter.name,
+            contactEmail: newShelter.contactEmail,
+            latitude: newShelter.latitude,
+            longitude: newShelter.longitude,
+            ownerID: user.id!
+        )
         
-        return .ok
+        do {
+            try await finalShelter.save(on: req.db)
+            
+            user.shelterID = finalShelter.id
+            user.role = .shelter
+            try await user.save(on: req.db)
+            
+            return .created
+        } catch {
+            throw Abort(.notAcceptable, reason: "Cannot create new shelter")
+        }
     }
     
     @Sendable
