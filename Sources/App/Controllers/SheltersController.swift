@@ -73,13 +73,13 @@ struct SheltersController: RouteCollection {
     
     @Sendable
     func createShelter(req: Request) async throws -> HTTPStatus {
-        let user = try req.auth.require(User.self)
+//        let user = try req.auth.require(User.self)
         
-        if user.shelterID != nil {
-            throw Abort(.conflict, reason: "User already has a shelter assigned")
-        }
-        
-        let newShelter = try req.content.decode(ShelterDTO.self)
+//        if user.shelterID != nil {
+//            throw Abort(.conflict, reason: "User already has a shelter assigned")
+//        }
+//        
+//        let newShelter = try req.content.decode(ShelterDTO.self)
         
         //           let fileName = "\(UUID().uuidString).jpg"
         //           let filePath = "Public/uploads/\(fileName)"
@@ -114,13 +114,13 @@ struct SheltersController: RouteCollection {
         //               imageURL: fileURLPath
         //           )
         
-        let finalShelter = Shelter(
-            name: newShelter.name,
-            contactEmail: newShelter.contactEmail,
-            latitude: newShelter.latitude,
-            longitude: newShelter.longitude,
-            ownerID: user.id!
-        )
+//        let finalShelter = Shelter(
+//            name: newShelter.name,
+//            contactEmail: newShelter.contactEmail,
+//            latitude: newShelter.latitude,
+//            longitude: newShelter.longitude,
+//            ownerID: user.id!
+//        )
         
 //        do {
 //            try await finalShelter.save(on: req.db)
