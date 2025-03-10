@@ -105,14 +105,22 @@ struct SheltersController: RouteCollection {
                at: filePath
            )
 
-           let finalShelter = Shelter(
-               name: newShelter.name,
-               contactEmail: newShelter.contactEmail,
-               latitude: newShelter.latitude,
-               longitude: newShelter.longitude,
-               ownerID: user.id!,
-               imageURL: fileURLPath
-           )
+//           let finalShelter = Shelter(
+//               name: newShelter.name,
+//               contactEmail: newShelter.contactEmail,
+//               latitude: newShelter.latitude,
+//               longitude: newShelter.longitude,
+//               ownerID: user.id!,
+//               imageURL: fileURLPath
+//           )
+        
+        let finalShelter = Shelter(
+            name: newShelter.name,
+            contactEmail: newShelter.contactEmail,
+            latitude: newShelter.latitude,
+            longitude: newShelter.longitude,
+            ownerID: user.id!
+        )
 
            do {
                try await finalShelter.save(on: req.db)
