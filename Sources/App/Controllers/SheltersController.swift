@@ -71,6 +71,7 @@ struct SheltersController: RouteCollection {
         return shelter
     }
     
+    /*
     @Sendable
     func createShelter(req: Request) async throws -> HTTPStatus {
         let user = try req.auth.require(User.self)
@@ -142,7 +143,7 @@ struct SheltersController: RouteCollection {
             throw Abort(.notAcceptable, reason: "Cannot create new shelter: \(error)")
         }
     }
-    
+    */
 //    @Sendable
 //    func createShelter(req: Request) async throws -> HTTPStatus {
 //        let user = try req.auth.require(User.self)
@@ -276,4 +277,74 @@ struct SheltersController: RouteCollection {
             throw Abort(.notFound, reason: "Not pets found on \(user.name) shelter")
         }
     }
+    
+    @Sendable
+    func createShelter(req: Request) async throws -> HTTPStatus {
+        let user = try req.auth.require(User.self)
+        
+        if user.shelterID != nil {
+            throw Abort(.conflict, reason: "User already has a shelter assigned")
+        }
+        
+        // Decodificamos todo el multipart en un único paso
+        let formData = try req.content.decode(ShelterFormData.self)
+        
+        var imageURLPath: String? = nil
+        
+        if let imageFile = formData.image {
+            // Crear el directorio si no existe
+            try FileManager.default.createDirectory(
+                atPath: "Public/uploads",
+                withIntermediateDirectories: true,
+                attributes: nil
+            )
+            
+            let fileName = "\(UUID().uuidString).jpg"
+            let filePath = "Public/uploads/\(fileName)"
+            imageURLPath = "uploads/\(fileName)"
+            
+            try await req.fileio.writeFile(
+                imageFile.data,
+                at: filePath
+            )
+        }
+        
+        let finalShelter = Shelter(
+            name: formData.name,
+            contactEmail: formData.contactEmail,  // Asegúrate de usar el campo correcto
+            latitude: formData.latitude,
+            longitude: formData.longitude,
+            ownerID: user.id!,
+            phone: formData.phone ?? "",
+            address: formData.address ?? "",
+            websiteURL: formData.website ?? "",
+            imageURL: imageURLPath,
+            description: formData.description ?? ""
+        )
+        
+        do {
+            try await finalShelter.save(on: req.db)
+            
+            user.shelterID = finalShelter.id
+            user.role = .shelter
+            try await user.save(on: req.db)
+            
+            return .created
+        } catch {
+            throw Abort(.notAcceptable, reason: "Cannot create new shelter: \(error)")
+        }
+    }
+}
+
+struct ShelterFormData: Content {
+    let name: String
+    let contactEmail: String
+    let latitude: Double
+    let longitude: Double
+    let description: String?
+    let adoptionPolicy: String?
+    let phone: String?
+    let website: String?
+    let address: String?
+    let image: File?  // Aquí se decodifica el archivo de imagen
 }
