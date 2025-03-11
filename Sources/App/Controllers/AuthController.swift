@@ -27,9 +27,11 @@ struct UserAuthenticator: AsyncMiddleware {
             print("✅ Usuario autenticado: \(String(describing: user.email))")
             print(token)
             request.auth.login(user)
+            print("AUTH LOGIN CORRECTO")
             return try await next.respond(to: request)
         } catch {
             print("❌ Error verificando el token: \(error)")
+            print(error.localizedDescription)
             throw Abort(.unauthorized, reason: "Invalid token")
         }
     }
