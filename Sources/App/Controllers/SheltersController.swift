@@ -6,7 +6,8 @@ struct SheltersController: RouteCollection {
     func boot(routes: RoutesBuilder) throws {
         let shelters = routes.grouped("shelters")
         let tokenProtected = shelters.grouped(UserAuthenticator())
-        tokenProtected.on(.POST, body: .collect(maxSize: "40mb"), use: createShelter)
+        //change to protected if works
+        shelters.on(.POST, body: .collect(maxSize: "40mb"), use: createShelter)
         
         shelters.get(use: getAllShelters)
         shelters.get(":id", use: getShelterByID)
