@@ -6,11 +6,10 @@ struct SheltersController: RouteCollection {
     func boot(routes: RoutesBuilder) throws {
         let shelters = routes.grouped("shelters")
         let tokenProtected = shelters.grouped(UserAuthenticator())
+        tokenProtected.on(.POST, body: .collect(maxSize: 40), use: createShelter)
         
         shelters.get(use: getAllShelters)
         shelters.get(":id", use: getShelterByID)
-        //tokenProtected.post(use: createShelter)
-        tokenProtected.on(.POST, body: .collect(maxSize: 40), use: createShelter)
         shelters.patch(":id", use: updateShelter)
         shelters.delete(":id", use: deleteShelter)
         tokenProtected.get("byDistance", use: getSheltersByDistance)
@@ -287,13 +286,24 @@ struct SheltersController: RouteCollection {
             throw Abort(.conflict, reason: "User already has a shelter assigned")
         }
         
-        // Decodificamos todo el multipart en un único paso
         let formData = try req.content.decode(ShelterFormData.self)
+        
+        if let bodyData = req.body.data {
+                let totalSizeMB = Double(bodyData.readableBytes) / (1024 * 1024)
+                print("Tamaño total del payload recibido: \(totalSizeMB) MB")
+            }
+        
+        let fileSizeBytes = formData.image?.data.readableBytes
+        let fileSizeMB = Double(fileSizeBytes ?? 0) / (1024 * 1024)
+            print("Tamaño del archivo recibido: \(fileSizeMB) MB")
+            
+        if fileSizeBytes! > 20 * 1024 * 1024 {
+                print("El archivo supera los 20 MB")
+            }
         
         var imageURLPath: String? = nil
         
         if let imageFile = formData.image {
-            // Crear el directorio si no existe
             try FileManager.default.createDirectory(
                 atPath: "Public/uploads",
                 withIntermediateDirectories: true,
