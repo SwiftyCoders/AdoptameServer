@@ -9,7 +9,8 @@ struct SheltersController: RouteCollection {
         
         shelters.get(use: getAllShelters)
         shelters.get(":id", use: getShelterByID)
-        tokenProtected.post(use: createShelter)
+        //tokenProtected.post(use: createShelter)
+        tokenProtected.on(.POST, body: .collect(maxSize: 40), use: createShelter)
         shelters.patch(":id", use: updateShelter)
         shelters.delete(":id", use: deleteShelter)
         tokenProtected.get("byDistance", use: getSheltersByDistance)
