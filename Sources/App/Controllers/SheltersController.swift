@@ -287,7 +287,7 @@ struct SheltersController: RouteCollection {
             throw Abort(.conflict, reason: "User already has a shelter assigned")
         }
         
-        let formData = try req.content.decode(ShelterFormData.self)
+        let formData = try req.content.decode(ShelterFormData.self, as: .formData)
         
         var imageURLPath: String? = nil
         
@@ -303,7 +303,7 @@ struct SheltersController: RouteCollection {
             imageURLPath = "uploads/\(fileName)"
             
             try await req.fileio.writeFile(
-                imageFile.data,
+                ByteBuffer(data: imageFile),
                 at: filePath
             )
         }
@@ -345,5 +345,5 @@ struct ShelterFormData: Content {
     let phone: String?
     let website: String?
     let address: String?
-    let image: File?  // Aquí se decodifica el archivo de imagen
+    let image: Data?  // Aquí se decodifica el archivo de imagen
 }
