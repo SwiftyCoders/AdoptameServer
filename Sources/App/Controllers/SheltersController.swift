@@ -281,9 +281,7 @@ struct SheltersController: RouteCollection {
     
     @Sendable
     func createShelter(req: Request) async throws -> HTTPStatus {
-        //let user = try req.auth.require(User.self)
-        
-        let user = User(appleUserID: "MockString", name: "MockName", email: "MockeEmail@gmail.com", password: "MockPassword", role: .adopter)
+        let user = try req.auth.require(User.self)
         
         if user.shelterID != nil {
             throw Abort(.conflict, reason: "User already has a shelter assigned")
