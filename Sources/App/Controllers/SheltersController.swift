@@ -289,19 +289,6 @@ struct SheltersController: RouteCollection {
         
         let formData = try req.content.decode(ShelterFormData.self)
         
-        if let bodyData = req.body.data {
-                let totalSizeMB = Double(bodyData.readableBytes) / (1024 * 1024)
-                print("Tamaño total del payload recibido: \(totalSizeMB) MB")
-            }
-        
-        let fileSizeBytes = formData.image?.data.readableBytes
-        let fileSizeMB = Double(fileSizeBytes ?? 0) / (1024 * 1024)
-            print("Tamaño del archivo recibido: \(fileSizeMB) MB")
-            
-        if fileSizeBytes! > 20 * 1024 * 1024 {
-                print("El archivo supera los 20 MB")
-            }
-        
         var imageURLPath: String? = nil
         
         if let imageFile = formData.image {
