@@ -6,8 +6,7 @@ struct SheltersController: RouteCollection {
     func boot(routes: RoutesBuilder) throws {
         let shelters = routes.grouped("shelters")
         let tokenProtected = shelters.grouped(UserAuthenticator())
-        //change to protected if works
-        tokenProtected.on(.POST, body: .collect(maxSize: "10mb"), use: createShelter)
+        tokenProtected.on(.POST, body: .stream, use: createShelter)
         
         shelters.get(use: getAllShelters)
         shelters.get(":id", use: getShelterByID)
@@ -400,62 +399,6 @@ struct SheltersController: RouteCollection {
         }
     }
 }
-    
-//    @Sendable
-//    func createShelter(req: Request) async throws -> HTTPStatus {
-//        let user = try req.auth.require(User.self)
-//        
-//        if user.shelterID != nil {
-//            throw Abort(.conflict, reason: "User already has a shelter assigned")
-//        }
-//        
-//        let formData = try req.content.decode(ShelterFormData.self, as: .formData)
-//        
-//        var imageURLPath: String? = nil
-//        
-//        if let imageFile = formData.image {
-//            try FileManager.default.createDirectory(
-//                atPath: "Public/uploads",
-//                withIntermediateDirectories: true,
-//                attributes: nil
-//            )
-//            
-//            let fileName = "\(UUID().uuidString).jpg"
-//            let filePath = "Public/uploads/\(fileName)"
-//            imageURLPath = "uploads/\(fileName)"
-//            
-//            try await req.fileio.writeFile(
-//                ByteBuffer(data: imageFile),
-//                at: filePath
-//            )
-//        }
-//        
-//        let finalShelter = Shelter(
-//            name: formData.name,
-//            contactEmail: formData.contactEmail,  // Asegúrate de usar el campo correcto
-//            latitude: formData.latitude,
-//            longitude: formData.longitude,
-//            ownerID: user.id!,
-//            phone: formData.phone ?? "",
-//            address: formData.address ?? "",
-//            websiteURL: formData.website ?? "",
-//            imageURL: imageURLPath,
-//            description: formData.description ?? ""
-//        )
-//        
-//        do {
-//            try await finalShelter.save(on: req.db)
-//            
-//            user.shelterID = finalShelter.id
-//            user.role = .shelter
-//            try await user.save(on: req.db)
-//            
-//            return .created
-//        } catch {
-//            throw Abort(.notAcceptable, reason: "Cannot create new shelter: \(error)")
-//        }
-//    }
-//}
 
 struct ShelterFormData: Content {
     let name: String
