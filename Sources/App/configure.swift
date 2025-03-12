@@ -8,6 +8,8 @@ import JWT
 public func configure(_ app: Application) async throws {
     app.middleware.use(FileMiddleware(publicDirectory: app.directory.publicDirectory))
     app.routes.defaultMaxBodySize = "50mb"
+    app.http.server.configuration.requestDecompression = .enabled
+    app.http.server.configuration.responseCompression = .enabled
     
     guard let secretKey = Environment.get("JWT_SECRET") else {
         app.logger.critical("JWT_SECRET is not set in environment variables")
