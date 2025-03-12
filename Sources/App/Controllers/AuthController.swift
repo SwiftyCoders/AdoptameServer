@@ -4,6 +4,31 @@ import Fluent
 
 struct UserAuthenticator: AsyncMiddleware {
     func respond(to request: Request, chainingTo next: AsyncResponder) async throws -> Response {
+        // Leer el token ANTES de consumir el cuerpo de la solicitud
+        guard let token = request.headers.bearerAuthorization?.token else {
+            return try await next.respond(to: request)
+        }
+        
+        // Verificar el token SIN acceder al cuerpo
+        guard let keys = request.application.storage[JWTKeysStorageKey.self] else {
+            throw Abort(.internalServerError, reason: "JWTKeyCollection no configurada")
+        }
+        
+        let payload = try await keys.verify(token, as: UserPayload.self)
+        guard let user = try await User.find(payload.userID, on: request.db) else {
+            throw Abort(.unauthorized, reason: "Usuario no encontrado")
+        }
+        
+        request.auth.login(user)
+        print("MY REQUEST: \(request)")
+        print("AUTH LOGIN CORRECTO")
+        // Pasar la solicitud AL CONTROLADOR
+        return try await next.respond(to: request)
+    }
+}
+
+struct UserAuthenticatorBUENO: AsyncMiddleware {
+    func respond(to request: Request, chainingTo next: AsyncResponder) async throws -> Response {
         guard let token = request.headers.bearerAuthorization?.token else {
             return try await next.respond(to: request)
         }
