@@ -6,7 +6,7 @@ struct SheltersController: RouteCollection {
     func boot(routes: RoutesBuilder) throws {
         let shelters = routes.grouped("shelters")
         let tokenProtected = shelters.grouped(UserAuthenticator())
-        tokenProtected.on(.POST, body: .stream, use: createShelter)
+        tokenProtected.on(.POST, use: createShelter)
         
         shelters.get(use: getAllShelters)
         shelters.get(":id", use: getShelterByID)
@@ -70,143 +70,6 @@ struct SheltersController: RouteCollection {
         
         return shelter
     }
-    
-    /*
-     @Sendable
-     func createShelter(req: Request) async throws -> HTTPStatus {
-     let user = try req.auth.require(User.self)
-     
-     if user.shelterID != nil {
-     throw Abort(.conflict, reason: "User already has a shelter assigned")
-     }
-     
-     // En vez de verificar el contentType, intentamos decodificar directamente
-     // Creamos un struct temporal para manejar los campos del formulario
-     struct FormData: Content {
-     let name: String
-     let contactEmail: String
-     let latitude: Double
-     let longitude: Double
-     let description: String?
-     let adoptionPolicy: String?
-     let phone: String?
-     let website: String?
-     let address: String?
-     }
-     
-     // Decodificamos los campos del formulario
-     let formData = try req.content.decode(FormData.self)
-     
-     // Procesamos la imagen si existe
-     var imageURLPath: String? = nil
-     
-     if let image = req.body.data {
-     // Crear el directorio si no existe
-     try FileManager.default.createDirectory(
-     atPath: "Public/uploads",
-     withIntermediateDirectories: true,
-     attributes: nil
-     )
-     
-     let fileName = "\(UUID().uuidString).jpg"
-     let filePath = "Public/uploads/\(fileName)"
-     imageURLPath = "uploads/\(fileName)"
-     
-     try await req.fileio.writeFile(
-     image,
-     at: filePath
-     )
-     }
-     
-     let finalShelter = Shelter(
-     name: formData.name,
-     contactEmail: formData.description ?? "",
-     latitude: formData.latitude,
-     longitude: formData.longitude,
-     ownerID: user.id!,
-     phone: formData.phone ?? "",
-     address: formData.address ?? "",
-     websiteURL: formData.website ?? "",
-     imageURL: imageURLPath,
-     description: formData.description ?? ""
-     )
-     
-     do {
-     try await finalShelter.save(on: req.db)
-     
-     user.shelterID = finalShelter.id
-     user.role = .shelter
-     try await user.save(on: req.db)
-     
-     return .created
-     } catch {
-     throw Abort(.notAcceptable, reason: "Cannot create new shelter: \(error)")
-     }
-     }
-     */
-    //    @Sendable
-    //    func createShelter(req: Request) async throws -> HTTPStatus {
-    //        let user = try req.auth.require(User.self)
-    //        
-    //        if user.shelterID != nil {
-    //            throw Abort(.conflict, reason: "User already has a shelter assigned")
-    //        }
-    //        
-    //        let newShelter = try req.content.decode(ShelterDTO.self)
-    //        
-    //        let fileName = "\(UUID().uuidString).jpg"
-    //        let filePath = "Public/uploads/\(fileName)"
-    //        let fileURLPath = "uploads/\(fileName)"
-    //        
-    ////        guard let imageBase64 = newShelter.image else {
-    ////            throw Abort(.badRequest, reason: "Image is required")
-    ////        }
-    ////        
-    ////        let base64String = imageBase64.replacingOccurrences(of: "data:image/jpeg;base64,", with: "")
-    ////        guard let imageData = Data(base64Encoded: base64String) else {
-    ////            throw Abort(.badRequest, reason: "Invalid image data")
-    ////        }
-    ////        
-    ////        try FileManager.default.createDirectory(
-    ////            atPath: "Public/uploads",
-    ////            withIntermediateDirectories: true,
-    ////            attributes: nil
-    ////        )
-    ////        
-    ////        try await req.fileio.writeFile(
-    ////            ByteBuffer(data: imageData),
-    ////            at: filePath
-    ////        )
-    //        
-    ////        let finalShelter = Shelter(
-    ////            name: newShelter.name,
-    ////            contactEmail: newShelter.contactEmail,
-    ////            latitude: newShelter.latitude,
-    ////            longitude: newShelter.longitude,
-    ////            ownerID: user.id!,
-    ////            imageURL: fileURLPath
-    ////        )
-    //        
-    //        let finalShelter = Shelter(
-    //            name: newShelter.name,
-    //            contactEmail: newShelter.contactEmail,
-    //            latitude: newShelter.latitude,
-    //            longitude: newShelter.longitude,
-    //            ownerID: user.id!
-    //        )
-    //        
-    //        do {
-    //            try await finalShelter.save(on: req.db)
-    //            
-    //            user.shelterID = finalShelter.id
-    //            user.role = .shelter
-    //            try await user.save(on: req.db)
-    //            
-    //            return .created
-    //        } catch {
-    //            throw Abort(.notAcceptable, reason: "Cannot create new shelter")
-    //        }
-    //    }
     
     @Sendable
     func updateShelter(req: Request) async throws -> Shelter {
@@ -277,127 +140,66 @@ struct SheltersController: RouteCollection {
             throw Abort(.notFound, reason: "Not pets found on \(user.name) shelter")
         }
     }
-    
+  
     @Sendable
     func createShelter(req: Request) async throws -> HTTPStatus {
-        // Log básico del inicio de la solicitud
         print("🔵 Iniciando procesamiento de createShelter")
         
-        // Verificar el token y autenticación
-        print("🔐 Verificando autenticación...")
         let user = try req.auth.require(User.self)
         print("✅ Usuario autenticado: \(user.email ?? "sin email")")
         
         if user.shelterID != nil {
-            print("⚠️ Usuario ya tiene un shelter asignado")
             throw Abort(.conflict, reason: "User already has a shelter assigned")
         }
         
-        // Inspeccionar los headers
-        print("📋 Headers de la solicitud:")
-        for header in req.headers {
-            print("  \(header.name): \(header.value)")
-        }
+        // Decodificar como multipart
+        let formData = try req.content.decode(ShelterFormData.self)
         
-        // Verificar el tipo de contenido
-        print("📄 Content-Type: \(req.headers.first(name: .contentType) ?? "No content type")")
+        var imageURLPath: String? = nil
         
-        // Intentar decodificar el formulario
-        print("🔍 Intentando decodificar el formulario multipart...")
-        do {
-            let formData = try req.content.decode(ShelterFormData.self, as: .formData)
-            print("✅ Formulario decodificado correctamente")
-            print("📝 Nombre del shelter: \(formData.name)")
-            print("📝 Tamaño de la imagen: \(formData.image?.count ?? 0) bytes")
+        if let imageFile = formData.image {
+            let publicDir = req.application.directory.publicDirectory
+            let uploadsDir = publicDir + "uploads"
             
-            // Procesar la imagen si existe
-            var imageURLPath: String? = nil
-            
-            if let imageFile = formData.image {
-                print("🖼️ Procesando imagen de \(imageFile.count) bytes")
-                try FileManager.default.createDirectory(
-                    atPath: "Public/uploads",
-                    withIntermediateDirectories: true,
-                    attributes: nil
-                )
-                
-                let fileName = "\(UUID().uuidString).jpg"
-                let filePath = "Public/uploads/\(fileName)"
-                imageURLPath = "uploads/\(fileName)"
-                
-                print("💾 Guardando imagen en: \(filePath)")
-                try await req.fileio.writeFile(
-                    ByteBuffer(data: imageFile),
-                    at: filePath
-                )
-                print("✅ Imagen guardada correctamente")
-            } else {
-                print("⚠️ No se recibió imagen")
-            }
-            
-            print("🏗️ Creando objeto Shelter...")
-            let finalShelter = Shelter(
-                name: formData.name,
-                contactEmail: formData.contactEmail,
-                latitude: formData.latitude,
-                longitude: formData.longitude,
-                ownerID: user.id!,
-                phone: formData.phone ?? "",
-                address: formData.address ?? "",
-                websiteURL: formData.website ?? "",
-                imageURL: imageURLPath,
-                description: formData.description ?? ""
+            // Crear directorio si no existe
+            try FileManager.default.createDirectory(
+                atPath: uploadsDir,
+                withIntermediateDirectories: true
             )
             
-            print("💾 Guardando shelter en la base de datos...")
-            try await finalShelter.save(on: req.db)
+            // Generar nombre único
+            let fileName = "\(UUID().uuidString).\(imageFile.extension ?? "bin")"
+            let filePath = uploadsDir + "/" + fileName
             
-            print("🔄 Actualizando información del usuario...")
-            user.shelterID = finalShelter.id
-            user.role = .shelter
-            try await user.save(on: req.db)
+            // Escribir usando FileIO (manejo asíncrono correcto)
             
-            print("✅ Shelter creado exitosamente")
-            return .created
-        } catch {
-            print("❌ Error al decodificar o procesar el formulario: \(error)")
-            print("❌ Error detallado: \(error.localizedDescription)")
+            try await req.fileio.writeFile(imageFile.data, at: filePath)
             
-            // Intenta diagnosticar problemas específicos
-            if let abortError = error as? Abort {
-                print("❌ Abort error: \(abortError.reason)")
-            }
-            
-            // Si el error es en la decodificación, veamos qué datos estamos recibiendo
-            print("🔍 Intentando examinar los datos en bruto...")
-            if let bodyData = req.body.data {
-                print("📦 Tamaño de los datos en bruto: \(bodyData.readableBytes) bytes")
-                
-                // Guardar los datos para examinarlos
-                do {
-                    let fileName = "error_payload_\(Date().timeIntervalSince1970).raw"
-                    let filePath = "Public/debug/\(fileName)"
-                    
-                    // Crear directorio de depuración
-                    try FileManager.default.createDirectory(
-                        atPath: "Public/debug",
-                        withIntermediateDirectories: true,
-                        attributes: nil
-                    )
-                    
-                    print("💾 Guardando payload de error en: \(filePath)")
-                    try await req.fileio.writeFile(bodyData, at: filePath)
-                    print("✅ Payload guardado para depuración")
-                } catch {
-                    print("❌ No se pudo guardar el payload: \(error)")
-                }
-            } else {
-                print("❌ No hay datos en el cuerpo de la solicitud")
-            }
-            
-            throw Abort(.notAcceptable, reason: "Cannot create new shelter: \(error)")
+            imageURLPath = "uploads/\(fileName)"
         }
+        
+        let finalShelter = Shelter(
+            name: formData.name,
+            contactEmail: formData.contactEmail,
+            latitude: formData.latitude,
+            longitude: formData.longitude,
+            ownerID: user.id!,
+            phone: formData.phone ?? "",
+            address: formData.address ?? "",
+            websiteURL: formData.website ?? "",
+            imageURL: imageURLPath,
+            description: formData.description ?? ""
+        )
+        
+        try await finalShelter.save(on: req.db)
+        user.shelterID = finalShelter.id
+        user.role = .shelter
+        try await user.save(on: req.db)
+        
+        return .created
     }
+    
+//
 }
 
 struct ShelterFormData: Content {
@@ -410,5 +212,264 @@ struct ShelterFormData: Content {
     let phone: String?
     let website: String?
     let address: String?
-    let image: Data?  // Aquí se decodifica el archivo de imagen
+    let image: File?
 }
+
+//@Sendable
+//    func createShelter(req: Request) async throws -> HTTPStatus {
+//        // Log básico del inicio de la solicitud
+//        print("🔵 Iniciando procesamiento de createShelter")
+//
+//        // Verificar el token y autenticación
+//        print("🔐 Verificando autenticación...")
+//        let user = try req.auth.require(User.self)
+//        print("✅ Usuario autenticado: \(user.email ?? "sin email")")
+//
+//        if user.shelterID != nil {
+//            print("⚠️ Usuario ya tiene un shelter asignado")
+//            throw Abort(.conflict, reason: "User already has a shelter assigned")
+//        }
+//
+//        // Inspeccionar los headers
+//        print("📋 Headers de la solicitud:")
+//        for header in req.headers {
+//            print("  \(header.name): \(header.value)")
+//        }
+//
+//        // Verificar el tipo de contenido
+//        print("📄 Content-Type: \(req.headers.first(name: .contentType) ?? "No content type")")
+//
+//        // Intentar decodificar el formulario
+//        print("🔍 Intentando decodificar el formulario multipart...")
+//        do {
+//            let formData = try req.content.decode(ShelterFormData.self, as: .formData)
+//            print("✅ Formulario decodificado correctamente")
+//            print("📝 Nombre del shelter: \(formData.name)")
+//            print("📝 Tamaño de la imagen: \(formData.image?.count ?? 0) bytes")
+//
+//            // Procesar la imagen si existe
+//            var imageURLPath: String? = nil
+//
+//            if let imageFile = formData.image {
+//                print("🖼️ Procesando imagen de \(imageFile.count) bytes")
+//                try FileManager.default.createDirectory(
+//                    atPath: "Public/uploads",
+//                    withIntermediateDirectories: true,
+//                    attributes: nil
+//                )
+//
+//                let fileName = "\(UUID().uuidString).jpg"
+//                let filePath = "Public/uploads/\(fileName)"
+//                imageURLPath = "uploads/\(fileName)"
+//
+//                print("💾 Guardando imagen en: \(filePath)")
+//                try await req.fileio.writeFile(
+//                    ByteBuffer(data: imageFile),
+//                    at: filePath
+//                )
+//                print("✅ Imagen guardada correctamente")
+//            } else {
+//                print("⚠️ No se recibió imagen")
+//            }
+//
+//            print("🏗️ Creando objeto Shelter...")
+//            let finalShelter = Shelter(
+//                name: formData.name,
+//                contactEmail: formData.contactEmail,
+//                latitude: formData.latitude,
+//                longitude: formData.longitude,
+//                ownerID: user.id!,
+//                phone: formData.phone ?? "",
+//                address: formData.address ?? "",
+//                websiteURL: formData.website ?? "",
+//                imageURL: imageURLPath,
+//                description: formData.description ?? ""
+//            )
+//
+//            print("💾 Guardando shelter en la base de datos...")
+//            try await finalShelter.save(on: req.db)
+//
+//            print("🔄 Actualizando información del usuario...")
+//            user.shelterID = finalShelter.id
+//            user.role = .shelter
+//            try await user.save(on: req.db)
+//
+//            print("✅ Shelter creado exitosamente")
+//            return .created
+//        } catch {
+//            print("❌ Error al decodificar o procesar el formulario: \(error)")
+//            print("❌ Error detallado: \(error.localizedDescription)")
+//
+//            // Intenta diagnosticar problemas específicos
+//            if let abortError = error as? Abort {
+//                print("❌ Abort error: \(abortError.reason)")
+//            }
+//
+//            // Si el error es en la decodificación, veamos qué datos estamos recibiendo
+//            print("🔍 Intentando examinar los datos en bruto...")
+//            if let bodyData = req.body.data {
+//                print("📦 Tamaño de los datos en bruto: \(bodyData.readableBytes) bytes")
+//
+//                // Guardar los datos para examinarlos
+//                do {
+//                    let fileName = "error_payload_\(Date().timeIntervalSince1970).raw"
+//                    let filePath = "Public/debug/\(fileName)"
+//
+//                    // Crear directorio de depuración
+//                    try FileManager.default.createDirectory(
+//                        atPath: "Public/debug",
+//                        withIntermediateDirectories: true,
+//                        attributes: nil
+//                    )
+//
+//                    print("💾 Guardando payload de error en: \(filePath)")
+//                    try await req.fileio.writeFile(bodyData, at: filePath)
+//                    print("✅ Payload guardado para depuración")
+//                } catch {
+//                    print("❌ No se pudo guardar el payload: \(error)")
+//                }
+//            } else {
+//                print("❌ No hay datos en el cuerpo de la solicitud")
+//            }
+//
+//            throw Abort(.notAcceptable, reason: "Cannot create new shelter: \(error)")
+//        }
+//    }
+
+
+/*
+ @Sendable
+ func createShelter(req: Request) async throws -> HTTPStatus {
+ let user = try req.auth.require(User.self)
+ 
+ if user.shelterID != nil {
+ throw Abort(.conflict, reason: "User already has a shelter assigned")
+ }
+ 
+ // En vez de verificar el contentType, intentamos decodificar directamente
+ // Creamos un struct temporal para manejar los campos del formulario
+ struct FormData: Content {
+ let name: String
+ let contactEmail: String
+ let latitude: Double
+ let longitude: Double
+ let description: String?
+ let adoptionPolicy: String?
+ let phone: String?
+ let website: String?
+ let address: String?
+ }
+ 
+ // Decodificamos los campos del formulario
+ let formData = try req.content.decode(FormData.self)
+ 
+ // Procesamos la imagen si existe
+ var imageURLPath: String? = nil
+ 
+ if let image = req.body.data {
+ // Crear el directorio si no existe
+ try FileManager.default.createDirectory(
+ atPath: "Public/uploads",
+ withIntermediateDirectories: true,
+ attributes: nil
+ )
+ 
+ let fileName = "\(UUID().uuidString).jpg"
+ let filePath = "Public/uploads/\(fileName)"
+ imageURLPath = "uploads/\(fileName)"
+ 
+ try await req.fileio.writeFile(
+ image,
+ at: filePath
+ )
+ }
+ 
+ let finalShelter = Shelter(
+ name: formData.name,
+ contactEmail: formData.description ?? "",
+ latitude: formData.latitude,
+ longitude: formData.longitude,
+ ownerID: user.id!,
+ phone: formData.phone ?? "",
+ address: formData.address ?? "",
+ websiteURL: formData.website ?? "",
+ imageURL: imageURLPath,
+ description: formData.description ?? ""
+ )
+ 
+ do {
+ try await finalShelter.save(on: req.db)
+ 
+ user.shelterID = finalShelter.id
+ user.role = .shelter
+ try await user.save(on: req.db)
+ 
+ return .created
+ } catch {
+ throw Abort(.notAcceptable, reason: "Cannot create new shelter: \(error)")
+ }
+ }
+ */
+//    @Sendable
+//    func createShelter(req: Request) async throws -> HTTPStatus {
+//        let user = try req.auth.require(User.self)
+//
+//        if user.shelterID != nil {
+//            throw Abort(.conflict, reason: "User already has a shelter assigned")
+//        }
+//
+//        let newShelter = try req.content.decode(ShelterDTO.self)
+//
+//        let fileName = "\(UUID().uuidString).jpg"
+//        let filePath = "Public/uploads/\(fileName)"
+//        let fileURLPath = "uploads/\(fileName)"
+//
+////        guard let imageBase64 = newShelter.image else {
+////            throw Abort(.badRequest, reason: "Image is required")
+////        }
+////
+////        let base64String = imageBase64.replacingOccurrences(of: "data:image/jpeg;base64,", with: "")
+////        guard let imageData = Data(base64Encoded: base64String) else {
+////            throw Abort(.badRequest, reason: "Invalid image data")
+////        }
+////
+////        try FileManager.default.createDirectory(
+////            atPath: "Public/uploads",
+////            withIntermediateDirectories: true,
+////            attributes: nil
+////        )
+////
+////        try await req.fileio.writeFile(
+////            ByteBuffer(data: imageData),
+////            at: filePath
+////        )
+//
+////        let finalShelter = Shelter(
+////            name: newShelter.name,
+////            contactEmail: newShelter.contactEmail,
+////            latitude: newShelter.latitude,
+////            longitude: newShelter.longitude,
+////            ownerID: user.id!,
+////            imageURL: fileURLPath
+////        )
+//
+//        let finalShelter = Shelter(
+//            name: newShelter.name,
+//            contactEmail: newShelter.contactEmail,
+//            latitude: newShelter.latitude,
+//            longitude: newShelter.longitude,
+//            ownerID: user.id!
+//        )
+//
+//        do {
+//            try await finalShelter.save(on: req.db)
+//
+//            user.shelterID = finalShelter.id
+//            user.role = .shelter
+//            try await user.save(on: req.db)
+//
+//            return .created
+//        } catch {
+//            throw Abort(.notAcceptable, reason: "Cannot create new shelter")
+//        }
+//    }
