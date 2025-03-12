@@ -7,7 +7,7 @@ struct SheltersController: RouteCollection {
         let shelters = routes.grouped("shelters")
         let tokenProtected = shelters.grouped(UserAuthenticator())
 //        tokenProtected.on(.POST, use: createShelter)
-        shelters.on(.POST, body: .collect(maxSize: "20mb"), use: createShelter)
+        tokenProtected.on(.POST, body: .collect(maxSize: "20mb"), use: createShelter)
         shelters.get(use: getAllShelters)
         shelters.get(":id", use: getShelterByID)
         shelters.patch(":id", use: updateShelter)
@@ -145,89 +145,61 @@ struct SheltersController: RouteCollection {
     func createShelter(req: Request) async throws -> HTTPStatus {
         print("🔵 Iniciando procesamiento de createShelter")
         
-        let imageUpload = try req.content.decode(ImageUpload.self)
+        let user = try req.auth.require(User.self)
+        print("✅ Usuario autenticado: \(user.email ?? "sin email")")
         
-        // Obtén los datos de la imagen y su nombre.
-        let imageData = imageUpload.file.data
-        let filename = imageUpload.file.filename
-        
-        // Obtén el directorio público de la aplicación y define la ruta "uploads/"
-        let uploadsDirectory = req.application.directory.publicDirectory + "uploads/"
-        
-        // Crea el directorio "uploads" si no existe
-        if !FileManager.default.fileExists(atPath: uploadsDirectory) {
-            try FileManager.default.createDirectory(atPath: uploadsDirectory, withIntermediateDirectories: true)
+        if user.shelterID != nil {
+            throw Abort(.conflict, reason: "User already has a shelter assigned")
         }
         
-        // Construye la ruta completa para guardar el archivo
-        let savePath = uploadsDirectory + filename
+        // Decodificar como multipart
+        let formData = try req.content.decode(ShelterFormData.self)
         
-        print("LLEGO HASTA AQUÍ")
-        // Guarda los datos de la imagen en la ruta especificada
-        //try imageData.write(to: URL(fileURLWithPath: savePath))
+        var imageURLPath: String? = nil
         
-        return .ok
+        if let imageFile = formData.image {
+            let publicDir = req.application.directory.publicDirectory
+            let uploadsDir = publicDir + "uploads"
+            
+            // Crear directorio si no existe
+            try FileManager.default.createDirectory(
+                atPath: uploadsDir,
+                withIntermediateDirectories: true
+            )
+            
+            // Generar nombre único
+            let fileName = "\(UUID().uuidString).\(imageFile.extension ?? "bin")"
+            let filePath = uploadsDir + "/" + fileName
+            
+            // Escribir usando FileIO (manejo asíncrono correcto)
+            
+            try await req.fileio.writeFile(imageFile.data, at: filePath)
+            
+            imageURLPath = "uploads/\(fileName)"
+        }
         
-//        let user = try req.auth.require(User.self)
-//        print("✅ Usuario autenticado: \(user.email ?? "sin email")")
-//        
-//        if user.shelterID != nil {
-//            throw Abort(.conflict, reason: "User already has a shelter assigned")
-//        }
-//        
-//        // Decodificar como multipart
-//        let formData = try req.content.decode(ShelterFormData.self)
-//        
-//        var imageURLPath: String? = nil
-//        
-//        if let imageFile = formData.image {
-//            let publicDir = req.application.directory.publicDirectory
-//            let uploadsDir = publicDir + "uploads"
-//            
-//            // Crear directorio si no existe
-//            try FileManager.default.createDirectory(
-//                atPath: uploadsDir,
-//                withIntermediateDirectories: true
-//            )
-//            
-//            // Generar nombre único
-//            let fileName = "\(UUID().uuidString).\(imageFile.extension ?? "bin")"
-//            let filePath = uploadsDir + "/" + fileName
-//            
-//            // Escribir usando FileIO (manejo asíncrono correcto)
-//            
-//            try await req.fileio.writeFile(imageFile.data, at: filePath)
-//            
-//            imageURLPath = "uploads/\(fileName)"
-//        }
-//        
-//        let finalShelter = Shelter(
-//            name: formData.name,
-//            contactEmail: formData.contactEmail,
-//            latitude: formData.latitude,
-//            longitude: formData.longitude,
-//            ownerID: user.id!,
-//            phone: formData.phone ?? "",
-//            address: formData.address ?? "",
-//            websiteURL: formData.website ?? "",
-//            imageURL: imageURLPath,
-//            description: formData.description ?? ""
-//        )
-//        
-//        try await finalShelter.save(on: req.db)
-//        user.shelterID = finalShelter.id
-//        user.role = .shelter
-//        try await user.save(on: req.db)
-//        
-//        return .created
+        let finalShelter = Shelter(
+            name: formData.name,
+            contactEmail: formData.contactEmail,
+            latitude: formData.latitude,
+            longitude: formData.longitude,
+            ownerID: user.id!,
+            phone: formData.phone ?? "",
+            address: formData.address ?? "",
+            websiteURL: formData.website ?? "",
+            imageURL: imageURLPath,
+            description: formData.description ?? ""
+        )
+        
+        try await finalShelter.save(on: req.db)
+        user.shelterID = finalShelter.id
+        user.role = .shelter
+        try await user.save(on: req.db)
+        
+        return .created
     }
-    
-//
 }
 
-struct ImageUpload: Content {
-    var file: File
-}
 
 struct ShelterFormData: Content {
     let name: String
