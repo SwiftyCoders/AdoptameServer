@@ -27,6 +27,7 @@ struct UserAuthenticator: AsyncMiddleware {
             print("✅ Usuario autenticado: \(String(describing: user.email))")
             print(token)
             request.auth.login(user)
+            print("MY REQUEST: \(request)")
             print("AUTH LOGIN CORRECTO")
             return try await next.respond(to: request)
         } catch {
