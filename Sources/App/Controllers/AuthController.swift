@@ -2,12 +2,13 @@ import Vapor
 import JWT
 import Fluent
 
+
 struct UserAuthenticator: AsyncMiddleware {
     func respond(to request: Request, chainingTo next: AsyncResponder) async throws -> Response {
         guard let token = request.headers.bearerAuthorization?.token else {
             return try await next.respond(to: request)
         }
-        
+
         guard let keys = request.application.storage[JWTKeysStorageKey.self] else {
             throw Abort(.internalServerError, reason: "JWTKeyCollection no configurada")
         }
@@ -21,18 +22,47 @@ struct UserAuthenticator: AsyncMiddleware {
 
             request.auth.login(user)
 
-            if request.headers.contentType?.type == "multipart" {
-                _ = try await request.body.collect(max: 50).get()
-            } else {
-                print("NO VA AQUÍ EN LOS MB")
-            }
-
+            // 🔥 NO PONER collect() AQUÍ EN EL MIDDLEWARE (remover completamente esta parte)
+            print("llego hasta aquí")
             return try await next.respond(to: request)
         } catch {
             throw Abort(.unauthorized, reason: "Invalid token")
         }
     }
 }
+
+
+//struct UserAuthenticator: AsyncMiddleware {
+//    func respond(to request: Request, chainingTo next: AsyncResponder) async throws -> Response {
+//        guard let token = request.headers.bearerAuthorization?.token else {
+//            return try await next.respond(to: request)
+//        }
+//        
+//        guard let keys = request.application.storage[JWTKeysStorageKey.self] else {
+//            throw Abort(.internalServerError, reason: "JWTKeyCollection no configurada")
+//        }
+//
+//        do {
+//            let payload = try await keys.verify(token, as: UserPayload.self)
+//
+//            guard let user = try await User.find(payload.userID, on: request.db) else {
+//                throw Abort(.unauthorized, reason: "Invalid token: user not found")
+//            }
+//
+//            request.auth.login(user)
+//
+//            if request.headers.contentType?.type == "multipart" {
+//                _ = try await request.body.collect(max: 50).get()
+//            } else {
+//                print("NO VA AQUÍ EN LOS MB")
+//            }
+//
+//            return try await next.respond(to: request)
+//        } catch {
+//            throw Abort(.unauthorized, reason: "Invalid token")
+//        }
+//    }
+//}
 
 //struct UserAuthenticator: AsyncMiddleware {
 //    func respond(to request: Request, chainingTo next: AsyncResponder) async throws -> Response {

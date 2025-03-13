@@ -144,6 +144,8 @@ struct SheltersController: RouteCollection {
     @Sendable
     func createShelter(req: Request) async throws -> HTTPStatus {
         print("🔵 Iniciando procesamiento de createShelter")
+        
+        _ = try await req.body.collect(max: 50).get()
 
         let user = try req.auth.require(User.self)
         print("✅ Usuario autenticado: \(String(describing: user.email))")
