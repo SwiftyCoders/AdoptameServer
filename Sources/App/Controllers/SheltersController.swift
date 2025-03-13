@@ -144,40 +144,37 @@ struct SheltersController: RouteCollection {
     @Sendable
     func createShelter(req: Request) async throws -> HTTPStatus {
         print("🔵 Iniciando procesamiento de createShelter")
-        
+
         let user = try req.auth.require(User.self)
-        print("✅ Usuario autenticado: \(user.email ?? "sin email")")
-        
+        print("✅ Usuario autenticado: \(String(describing: user.email))")
+
         if user.shelterID != nil {
-            throw Abort(.conflict, reason: "User already has a shelter assigned")
+            throw Abort(.conflict, reason: "User already has a shelter")
         }
-        
-        // Decodificar como multipart
+
+        // Obtenemos los datos del formulario Multipart claramente
         let formData = try req.content.decode(ShelterFormData.self)
-        
-        var imageURLPath: String? = nil
-        
+
+        var imagePath: String? = nil
+
         if let imageFile = formData.image {
+            let byteBuffer = imageFile.data
             let publicDir = req.application.directory.publicDirectory
             let uploadsDir = publicDir + "uploads"
-            
-            // Crear directorio si no existe
+
             try FileManager.default.createDirectory(
                 atPath: uploadsDir,
                 withIntermediateDirectories: true
             )
-            
-            // Generar nombre único
-            let fileName = "\(UUID().uuidString).\(imageFile.extension ?? "bin")"
-            let filePath = uploadsDir + "/" + fileName
-            
-            // Escribir usando FileIO (manejo asíncrono correcto)
-            
-            try await req.fileio.writeFile(imageFile.data, at: filePath)
-            
-            imageURLPath = "uploads/\(fileName)"
+
+            let fileName = "\(UUID().uuidString).jpg"
+            let filePath = uploadsDir + "/\(fileName)"
+
+            try await req.fileio.writeFile(byteBuffer, at: filePath)
+
+            imagePath = "uploads/\(fileName)"
         }
-        
+
         let finalShelter = Shelter(
             name: formData.name,
             contactEmail: formData.contactEmail,
@@ -186,22 +183,21 @@ struct SheltersController: RouteCollection {
             ownerID: user.id!,
             phone: formData.phone ?? "",
             address: formData.address ?? "",
-            websiteURL: formData.website ?? "",
-            imageURL: imageURLPath,
+            websiteURL: formData.website,
+            imageURL: imagePath,
             description: formData.description ?? ""
         )
-        
+
         try await finalShelter.save(on: req.db)
-        print("USER ROLE: \(user.role)")
+
+        // Actualizamos usuario claramente
         user.shelterID = finalShelter.id
         user.role = .shelter
-        print("USER ROLE: \(user.role)")
         try await user.save(on: req.db)
-        
+
         return .created
     }
 }
-
 
 struct ShelterFormData: Content {
     let name: String
@@ -215,6 +211,19 @@ struct ShelterFormData: Content {
     let address: String?
     let image: File?
 }
+
+//struct ShelterFormData: Content {
+//    let name: String
+//    let contactEmail: String
+//    let latitude: Double
+//    let longitude: Double
+//    let description: String?
+//    let adoptionPolicy: String?
+//    let phone: String?
+//    let website: String?
+//    let address: String?
+//    let image: File?
+//}
 
 //@Sendable
 //    func createShelter(req: Request) async throws -> HTTPStatus {
