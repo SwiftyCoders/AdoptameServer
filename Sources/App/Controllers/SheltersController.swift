@@ -192,8 +192,10 @@ struct SheltersController: RouteCollection {
         )
         
         try await finalShelter.save(on: req.db)
+        print("USER ROLE: \(user.role)")
         user.shelterID = finalShelter.id
         user.role = .shelter
+        print("USER ROLE: \(user.role)")
         try await user.save(on: req.db)
         
         return .created

@@ -8,35 +8,68 @@ struct UserAuthenticator: AsyncMiddleware {
             return try await next.respond(to: request)
         }
         
-        print(token)
-        
         guard let keys = request.application.storage[JWTKeysStorageKey.self] else {
             throw Abort(.internalServerError, reason: "JWTKeyCollection no configurada")
         }
-        
+
         do {
-            print("🔍 Verificando token: \(token)")
             let payload = try await keys.verify(token, as: UserPayload.self)
-            print("✅ Token verificado, userID: \(payload.userID)")
 
             guard let user = try await User.find(payload.userID, on: request.db) else {
-                print("⚠️ No se encontró el usuario en la DB")
                 throw Abort(.unauthorized, reason: "Invalid token: user not found")
             }
 
-            print("✅ Usuario autenticado: \(String(describing: user.email))")
-            print(token)
             request.auth.login(user)
-            print("MY REQUEST: \(request)")
-            print("AUTH LOGIN CORRECTO")
+
+            // 🔥 AHORA CLARAMENTE LA VERSIÓN CORRECTA Y DEFINITIVA
+            if request.headers.contentType == .multipart {
+                _ = try await request.body.collect(max: 50).get()
+            } else {
+                print("NO VA AQUÍ EN LOS MB")
+            }
+
             return try await next.respond(to: request)
         } catch {
-            print("❌ Error verificando el token: \(error)")
-            print(error.localizedDescription)
             throw Abort(.unauthorized, reason: "Invalid token")
         }
     }
 }
+
+//struct UserAuthenticator: AsyncMiddleware {
+//    func respond(to request: Request, chainingTo next: AsyncResponder) async throws -> Response {
+//        guard let token = request.headers.bearerAuthorization?.token else {
+//            return try await next.respond(to: request)
+//        }
+//        
+//        print(token)
+//        
+//        guard let keys = request.application.storage[JWTKeysStorageKey.self] else {
+//            throw Abort(.internalServerError, reason: "JWTKeyCollection no configurada")
+//        }
+//        
+//        do {
+//            print("🔍 Verificando token: \(token)")
+//            let payload = try await keys.verify(token, as: UserPayload.self)
+//            print("✅ Token verificado, userID: \(payload.userID)")
+//
+//            guard let user = try await User.find(payload.userID, on: request.db) else {
+//                print("⚠️ No se encontró el usuario en la DB")
+//                throw Abort(.unauthorized, reason: "Invalid token: user not found")
+//            }
+//
+//            print("✅ Usuario autenticado: \(String(describing: user.email))")
+//            print(token)
+//            request.auth.login(user)
+//            print("MY REQUEST: \(request)")
+//            print("AUTH LOGIN CORRECTO")
+//            return try await next.respond(to: request)
+//        } catch {
+//            print("❌ Error verificando el token: \(error)")
+//            print(error.localizedDescription)
+//            throw Abort(.unauthorized, reason: "Invalid token")
+//        }
+//    }
+//}
 
 struct AuthController: RouteCollection {
     func boot(routes: any RoutesBuilder) throws {
