@@ -154,6 +154,9 @@ struct SheltersController: RouteCollection {
 
         // Obtenemos los datos del formulario Multipart claramente
         let formData = try req.content.decode(ShelterFormData.self)
+        
+        print("formData:", formData)
+        print("formData.image:", formData.image ?? "SIN IMAGEN")
 
         var imagePath: String? = nil
 
