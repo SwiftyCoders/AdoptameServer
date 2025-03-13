@@ -21,8 +21,7 @@ struct UserAuthenticator: AsyncMiddleware {
 
             request.auth.login(user)
 
-            // 🔥 AHORA CLARAMENTE LA VERSIÓN CORRECTA Y DEFINITIVA
-            if request.headers.contentType == .multipart {
+            if request.headers.contentType?.type == "multipart" {
                 _ = try await request.body.collect(max: 50).get()
             } else {
                 print("NO VA AQUÍ EN LOS MB")
