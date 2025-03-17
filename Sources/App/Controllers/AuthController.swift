@@ -22,11 +22,11 @@ struct UserAuthenticator: AsyncMiddleware {
 
             request.auth.login(user)
 
-            // 🔥 NO PONER collect() AQUÍ EN EL MIDDLEWARE (remover completamente esta parte)
-            print("llego hasta aquí")
             return try await next.respond(to: request)
+        } catch let abort as AbortError where abort.status == .unauthorized {
+            throw abort
         } catch {
-            throw Abort(.unauthorized, reason: "Invalid token")
+            throw error
         }
     }
 }

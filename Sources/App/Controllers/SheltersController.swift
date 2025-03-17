@@ -149,14 +149,15 @@ struct SheltersController: RouteCollection {
 
         let user = try req.auth.require(User.self)
         print("✅ Usuario autenticado: \(String(describing: user.email))")
+        
+        //Añadir comprobación email ya existe
 
         if user.shelterID != nil {
             throw Abort(.conflict, reason: "User already has a shelter")
         }
 
-        // Obtenemos los datos del formulario Multipart claramente
         let formData = try req.content.decode(ShelterFormData.self)
-        
+                
         print("formData:", formData)
         print("formData.image:", formData.image ?? "SIN IMAGEN")
 
