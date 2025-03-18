@@ -21,9 +21,11 @@ struct PetsController: RouteCollection {
     func createPet(req: Request) async throws -> HTTPStatus {
         let user = try req.auth.require(User.self)
         
-        let pet = try req.content.decode(PetDTO.self)
+        _ = try await req.body.collect(max: 50).get()
         
-        guard let imagesBase64 = pet.images else {
+        let petFormData = try req.content.decode(PetFormData.self)
+        
+        guard let images = petFormData.images else {
             throw Abort(.badRequest, reason: "Image is required")
         }
         
@@ -36,30 +38,22 @@ struct PetsController: RouteCollection {
             attributes: nil
         )
         
-        for image in imagesBase64 {
+        for image in images {
+            let byteBuffer =  image.data
+            let publicDir = req.application.directory.publicDirectory
+            let uploadsDir = publicDir + "pets"
+            
+            try FileManager.default.createDirectory(
+                atPath: uploadsDir,
+                withIntermediateDirectories: true
+            )
+            
             let fileName = "\(UUID().uuidString).jpg"
-            let filePath = "Public/pets/\(fileName)"
-            let fileURLPath = "pets/\(fileName)"
+            let filePath = uploadsDir + "/\(fileName)"
             
-            let regex = try! NSRegularExpression(pattern: "^data:image\\/(jpeg|png);base64,", options: [])
-            let base64String = regex.stringByReplacingMatches(
-                in: image,
-                options: [],
-                range: NSRange(location: 0, length: image.count),
-                withTemplate: ""
-            )
+            try await req.fileio.writeFile(byteBuffer, at: filePath)
             
-            //let base64String = image.replacingOccurrences(of: "data:image/jpeg;base64,", with: "")
-            guard let imageData = Data(base64Encoded: base64String) else {
-                throw Abort(.badRequest, reason: "Invalid image data")
-            }
-            
-            try await req.fileio.writeFile(
-                ByteBuffer(data: imageData),
-                at: filePath
-            )
-            
-            imageURLs.append(fileURLPath)
+            imageURLs.append("/pets/\(fileName)")
         }
         
         guard let userShelterID = user.shelterID else {
@@ -75,19 +69,19 @@ struct PetsController: RouteCollection {
         do {
             let dbPet = Pet(
                 shelterID: userShelterID,
-                name: pet.name,
-                age: pet.age,
-                description: pet.description,
-                personality: pet.personality,
-                idealHome: pet.idealHome,
-                medicalCondition: pet.medicalCondition,
-                adoptionInfo: pet.adoptionInfo,
-                species: pet.species,
-                breed: pet.breed,
-                size: pet.size,
-                gender: pet.gender,
-                adoptionStatus: pet.adoptionStatus,
-                imageURLs: imageURLs,  // Ahora guardamos todas las URLs
+                name: petFormData.name,
+                age: petFormData.age,
+                description: petFormData.description,
+                personality: petFormData.personality,
+                idealHome: petFormData.idealHome,
+                medicalCondition: petFormData.medicalCondition,
+                adoptionInfo: petFormData.adoptionInfo,
+                species: petFormData.species,
+                breed: petFormData.breed,
+                size: petFormData.size,
+                gender: petFormData.gender,
+                adoptionStatus: petFormData.adoptionStatus,
+                imageURLs: imageURLs,
                 latitude: userShelter.latitude,
                 longitude: userShelter.longitude
             )
@@ -261,4 +255,21 @@ struct PetFilterRequest: Content {
     var gender: PetGender?
     var size: PetSize?
     var age: PetAge?
+}
+
+struct PetFormData: Content {
+    let name: String
+    let age: PetAge
+    let description: String?
+    let personality: String?
+    let idealHome: String?
+    let medicalCondition: String?
+    let adoptionInfo: String?
+    let breed: String
+    let images: [File]?
+    
+    let size: PetSize
+    let adoptionStatus: AdoptionStatus
+    let species: Species
+    let gender: PetGender
 }
