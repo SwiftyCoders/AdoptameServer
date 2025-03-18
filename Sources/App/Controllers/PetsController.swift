@@ -8,7 +8,7 @@ struct PetsController: RouteCollection {
         let pets = routes.grouped("pets")
         let tokenProtected = pets.grouped(UserAuthenticator())
         pets.get(use: getAllPets)
-        tokenProtected.post(use: createPet)
+        tokenProtected.on(.POST, body: .collect(maxSize: "20mb"), use: createPet)
         tokenProtected.delete(":petID", use: deletePetByID)
         tokenProtected.get("species", ":specie", use: getPetsBySpecie)
         tokenProtected.get("pet", ":petID", use: petByID)
@@ -24,6 +24,8 @@ struct PetsController: RouteCollection {
         _ = try await req.body.collect(max: 50).get()
         
         let petFormData = try req.content.decode(PetFormData.self)
+        
+        print("MY IMAGES: \(petFormData.images ?? [])")
         
         guard let images = petFormData.images else {
             throw Abort(.badRequest, reason: "Image is required")
