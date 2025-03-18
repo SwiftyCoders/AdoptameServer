@@ -25,6 +25,7 @@ struct PetsController: RouteCollection {
         
         let petFormData = try req.content.decode(PetFormData.self)
         
+        print("My PETDATA: \(petFormData)")
         print("MY IMAGES: \(petFormData.images ?? [])")
         
         guard let images = petFormData.images else {
