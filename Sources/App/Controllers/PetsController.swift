@@ -147,7 +147,9 @@ struct PetsController: RouteCollection {
     
         let radius: Double = req.query[Double.self, at: "radius"] ?? 30000
     
-        let pets = try await Pet.query(on: req.db).all()
+        let pets = try await Pet.query(on: req.db)
+            .with(\.$shelter)
+            .all()
     
         let petsResponse = pets
             .map { pet -> (PetResponseModel, Double) in
