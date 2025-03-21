@@ -159,6 +159,7 @@ struct PetsController: RouteCollection {
                                                            lon2: pet.longitude)
     
                 let response = PetResponseModel(
+                    id: pet.id,
                     shelter: pet.shelter,
                     name: pet.name,
                     age: pet.age,
@@ -287,6 +288,7 @@ struct PetFormData: Content {
 }
 
 struct PetResponseModel: Content {
+    let id: UUID?
     let shelter: Shelter
     let name: String
     let age: PetAge?
