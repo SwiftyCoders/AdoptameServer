@@ -25,9 +25,6 @@ struct PetsController: RouteCollection {
                 
         let petFormData = try req.content.decode(PetFormData.self)
         
-        print("My PETDATA: \(petFormData)")
-        print("MY IMAGES: \(petFormData.images ?? [])")
-        
         guard let images = petFormData.images else {
             throw Abort(.badRequest, reason: "Image is required")
         }
@@ -142,40 +139,50 @@ struct PetsController: RouteCollection {
     }
     
     @Sendable
-    func getPetsByDistance(req: Request) async throws -> [Pet] {
+    func getPetsByDistance(req: Request) async throws -> [PetResponseModel] {
         guard let userLat = req.query[Double.self, at: "lat"],
               let userLon = req.query[Double.self, at: "lon"] else {
             throw Abort(.badRequest, reason: "Se requieren los parámetros 'lat' y 'lon'.")
         }
-        
-        let radius: Double = req.query[Double.self, at: "radius"] ?? 5000
-        
-        return try await Pet.query(on: req.db)
-            .all()
-            .map { pet -> (Pet, Double) in
-                let petLat = pet.latitude
-                let petLon = pet.longitude
-                
-                let earthRadius = 6371000.0
-                
-                let latDiff = (petLat - userLat) * .pi / 180
-                let lonDiff = (petLon - userLon) * .pi / 180
-                let lat1 = userLat * .pi / 180
-                let lat2 = petLat * .pi / 180
-                
-                let a = sin(latDiff/2) * sin(latDiff/2) +
-                cos(lat1) * cos(lat2) *
-                sin(lonDiff/2) * sin(lonDiff/2)
-                let c = 2 * atan2(sqrt(a), sqrt(1-a))
-                let distance = earthRadius * c
-                
-                return (pet, distance)
+    
+        let radius: Double = req.query[Double.self, at: "radius"] ?? 30000
+    
+        let pets = try await Pet.query(on: req.db).all()
+    
+        let petsResponse = pets
+            .map { pet -> (PetResponseModel, Double) in
+                let distance = DistanceCalculator.distance(from: userLat,
+                                                           lon1: userLon,
+                                                           to: pet.latitude,
+                                                           lon2: pet.longitude)
+    
+                let response = PetResponseModel(
+                    shelter: pet.shelter,
+                    name: pet.name,
+                    age: pet.age,
+                    description: pet.description,
+                    personality: pet.personality,
+                    idealHome: pet.idealHome,
+                    medicalCondition: pet.medicalCondition,
+                    adoptionInfo: pet.adoptionInfo,
+                    species: pet.species,
+                    breed: pet.breed,
+                    size: pet.size,
+                    gender: pet.gender,
+                    adoptionStatus: pet.adoptionStatus,
+                    imageURLs: pet.imageURLs,
+                    distance: distance
+                )
+    
+                return (response, distance)
             }
             .filter { _, distance in
                 distance <= radius
             }
             .sorted { $0.1 < $1.1 }
             .map { $0.0 }
+    
+        return petsResponse
     }
     
     @Sendable
@@ -276,3 +283,108 @@ struct PetFormData: Content {
     let species: Species
     let gender: PetGender
 }
+
+struct PetResponseModel: Content {
+    let shelter: Shelter
+    let name: String
+    let age: PetAge?
+    let description: String?
+    let personality: String?
+    let idealHome: String?
+    let medicalCondition: String?
+    let adoptionInfo: String?
+    let species: Species
+    let breed: String?
+    let size: PetSize
+    let gender: PetGender
+    let adoptionStatus: AdoptionStatus
+    let imageURLs: [String]?
+    let distance: Double
+}
+
+
+
+//@Sendable
+//func getPetsByDistance(req: Request) async throws -> [PetResponseModel] {
+//    guard let userLat = req.query[Double.self, at: "lat"],
+//          let userLon = req.query[Double.self, at: "lon"] else {
+//        throw Abort(.badRequest, reason: "Se requieren los parámetros 'lat' y 'lon'.")
+//    }
+//    
+//    let radius: Double = req.query[Double.self, at: "radius"] ?? 5000
+//    
+//    let pets = try await Pet.query(on: req.db).all()
+//    
+//    let petsResponse = pets
+//        .map { pet -> (PetResponseModel, Double) in
+//            let distance = DistanceCalculator.distance(from: userLat,
+//                                                       lon1: userLon,
+//                                                       to: pet.latitude,
+//                                                       lon2: pet.longitude)
+//            
+//            let response = PetResponseModel(
+//                shelter: pet.shelter,
+//                name: pet.name,
+//                age: pet.age,
+//                description: pet.description,
+//                personality: pet.personality,
+//                idealHome: pet.idealHome,
+//                medicalCondition: pet.medicalCondition,
+//                adoptionInfo: pet.adoptionInfo,
+//                species: pet.species,
+//                breed: pet.breed,
+//                size: pet.size,
+//                gender: pet.gender,
+//                adoptionStatus: pet.adoptionStatus,
+//                imageURLs: pet.imageURLs,
+//                distance: distance
+//            )
+//            
+//            return (response, distance)
+//        }
+//        .filter { _, distance in
+//            distance <= radius
+//        }
+//        .sorted { $0.1 < $1.1 }
+//        .map { $0.0 }
+//    
+//    return petsResponse
+//}
+
+
+//@Sendable
+//func getPetsByDistance(req: Request) async throws -> [PetResponseModel] {
+//    guard let userLat = req.query[Double.self, at: "lat"],
+//          let userLon = req.query[Double.self, at: "lon"] else {
+//        throw Abort(.badRequest, reason: "Se requieren los parámetros 'lat' y 'lon'.")
+//    }
+//    
+//    let radius: Double = req.query[Double.self, at: "radius"] ?? 5000
+//    
+//    return try await Pet.query(on: req.db)
+//        .all()
+//        .map { pet -> (Pet, Double) in
+//            let petLat = pet.latitude
+//            let petLon = pet.longitude
+//            
+//            let earthRadius = 6371000.0
+//            
+//            let latDiff = (petLat - userLat) * .pi / 180
+//            let lonDiff = (petLon - userLon) * .pi / 180
+//            let lat1 = userLat * .pi / 180
+//            let lat2 = petLat * .pi / 180
+//            
+//            let a = sin(latDiff/2) * sin(latDiff/2) +
+//            cos(lat1) * cos(lat2) *
+//            sin(lonDiff/2) * sin(lonDiff/2)
+//            let c = 2 * atan2(sqrt(a), sqrt(1-a))
+//            let distance = earthRadius * c
+//            
+//            return (pet, distance)
+//        }
+//        .filter { _, distance in
+//            distance <= radius
+//        }
+//        .sorted { $0.1 < $1.1 }
+//        .map { $0.0 }
+//}
