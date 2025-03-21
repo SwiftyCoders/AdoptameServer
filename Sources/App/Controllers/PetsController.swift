@@ -19,10 +19,10 @@ struct PetsController: RouteCollection {
     
     @Sendable
     func createPet(req: Request) async throws -> HTTPStatus {
-        let user = try req.auth.require(User.self)
-        
         _ = try await req.body.collect(max: 50).get()
         
+        let user = try req.auth.require(User.self)
+                
         let petFormData = try req.content.decode(PetFormData.self)
         
         print("My PETDATA: \(petFormData)")

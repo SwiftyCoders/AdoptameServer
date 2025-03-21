@@ -16,40 +16,55 @@ struct SheltersController: RouteCollection {
     }
     
     @Sendable
-    func getSheltersByDistance(req: Request) async throws -> [Shelter] {
+    func getSheltersByDistance(req: Request) async throws -> [ShelterResponse] {
         guard let userLat = req.query[Double.self, at: "lat"],
               let userLon = req.query[Double.self, at: "lon"] else {
             throw Abort(.badRequest, reason: "Se requieren los parámetros 'lat' y 'lon'.")
         }
         
         let radius: Double = req.query[Double.self, at: "radius"] ?? 5000
+        let earthRadius = 6371000.0
         
-        return try await Shelter.query(on: req.db)
-            .all()
-            .map { shelter -> (Shelter, Double) in
-                let petLat = shelter.latitude
-                let petLon = shelter.longitude
-                
-                let earthRadius = 6371000.0
-                
-                let latDiff = (petLat - userLat) * .pi / 180
-                let lonDiff = (petLon - userLon) * .pi / 180
-                let lat1 = userLat * .pi / 180
-                let lat2 = petLat * .pi / 180
-                
-                let a = sin(latDiff/2) * sin(latDiff/2) +
-                cos(lat1) * cos(lat2) *
-                sin(lonDiff/2) * sin(lonDiff/2)
-                let c = 2 * atan2(sqrt(a), sqrt(1-a))
-                let distance = earthRadius * c
-                
-                return (shelter, distance)
-            }
-            .filter { _, distance in
-                distance <= radius
-            }
-            .sorted { $0.1 < $1.1 }
-            .map { $0.0 }
+        let shelters = try await Shelter.query(on: req.db).all()
+        
+        let shelterResponses = shelters
+                .map { shelter -> (ShelterResponse, Double) in
+                    let shelterLat = shelter.latitude
+                    let shelterLon = shelter.longitude
+                    
+                    let latDiff = (shelterLat - userLat) * .pi / 180
+                    let lonDiff = (shelterLon - userLon) * .pi / 180
+                    let lat1 = userLat * .pi / 180
+                    let lat2 = shelterLat * .pi / 180
+                    
+                    let a = sin(latDiff / 2) * sin(latDiff / 2) +
+                            cos(lat1) * cos(lat2) *
+                            sin(lonDiff / 2) * sin(lonDiff / 2)
+                    let c = 2 * atan2(sqrt(a), sqrt(1 - a))
+                    let distance = earthRadius * c
+                    
+                    let response = ShelterResponse(
+                        id: shelter.id,
+                        name: shelter.name,
+                        contactEmail: shelter.contactEmail,
+                        phone: shelter.phone,
+                        address: shelter.address,
+                        latitude: shelter.latitude,
+                        longitude: shelter.longitude,
+                        websiteURL: shelter.websiteURL,
+                        imageURL: shelter.imageURL,
+                        description: shelter.description,
+                        distance: distance
+                    )
+                    return (response, distance)
+                }
+                .filter { _, distance in
+                    distance <= radius
+                }
+                .sorted { $0.1 < $1.1 }
+                .map { $0.0 }
+            
+            return shelterResponses
     }
     
     @Sendable

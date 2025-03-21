@@ -62,3 +62,18 @@ final class Shelter: Model, Content, @unchecked Sendable {
         self.description = description
     }
 }
+
+
+struct ShelterResponse: Content {
+    var id: UUID?
+    var name: String
+    var contactEmail: String
+    var phone: String?
+    var address: String?
+    var latitude: Double
+    var longitude: Double
+    var websiteURL: String?
+    var imageURL: String?
+    var description: String?
+    var distance: Double
+}
