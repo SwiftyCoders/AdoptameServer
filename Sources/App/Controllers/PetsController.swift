@@ -145,7 +145,7 @@ struct PetsController: RouteCollection {
             throw Abort(.badRequest, reason: "Se requieren los parámetros 'lat' y 'lon'.")
         }
     
-        let radius: Double = req.query[Double.self, at: "radius"] ?? 30000
+        let radius: Double = req.query[Double.self, at: "radius"] ?? 300000
     
         let pets = try await Pet.query(on: req.db)
             .with(\.$shelter)
