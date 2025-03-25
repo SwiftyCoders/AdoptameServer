@@ -189,10 +189,10 @@ struct PetsController: RouteCollection {
     }
     
     @Sendable
-    func getAllPets(req: Request) async throws -> [Pet] {
+    func getAllPets(req: Request) async throws -> Page<Pet> {
         do {
             return try await Pet.query(on: req.db)
-                .all()
+                .paginate(for: req)
         } catch {
             throw Abort(.badRequest, reason: "ERROR AL OBTENER TODOS LOS PETS REAL")
         }
