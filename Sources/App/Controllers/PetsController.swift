@@ -85,7 +85,7 @@ struct PetsController: RouteCollection {
                 imageURLs: imageURLs,
                 latitude: userShelter.latitude,
                 longitude: userShelter.longitude,
-                location: ""
+                location: nil
             )
             
             try await dbPet.save(on: req.db)
