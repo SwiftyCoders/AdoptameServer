@@ -85,10 +85,20 @@ struct PetsController: RouteCollection {
                 imageURLs: imageURLs,
                 latitude: userShelter.latitude,
                 longitude: userShelter.longitude,
-                location: makeLocationData(lat: userShelter.latitude, lon: userShelter.longitude)
+                location: ""
             )
             
             try await dbPet.save(on: req.db)
+            
+            guard let sqlDb = req.db as? SQLDatabase else {
+                    throw Abort(.internalServerError, reason: "SQLDatabase no accesible.")
+                }
+
+                try await sqlDb.raw("""
+                    UPDATE pets SET location = ST_GeogFromText('SRID=4326;POINT(\(bind: dbPet.longitude) \(bind: dbPet.latitude))')
+                    WHERE id = \(bind: dbPet.requireID())
+                """).run()
+            
             return .created
         } catch {
             print(String(reflecting: error))

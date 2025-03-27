@@ -55,8 +55,8 @@ final class Pet: Model, Content, @unchecked Sendable {
     @Field(key: "longitude")
     var longitude: Double
     
-    @Field(key: "location")
-    var location: Data
+    @OptionalField(key: "location")
+    var location: String?
 
     @Timestamp(key: "createdAt", on: .create)
     var createdAt: Date?
@@ -66,7 +66,7 @@ final class Pet: Model, Content, @unchecked Sendable {
 
     init() {}
     
-    init(id: UUID? = nil, shelterID: UUID, name: String, age: PetAge? = nil, description: String? = nil, personality: String? = nil, idealHome: String? = nil, medicalCondition: String? = nil, adoptionInfo: String? = nil, species: Species, breed: String? = nil, size: PetSize, gender: PetGender, adoptionStatus: AdoptionStatus, imageURLs: [String]? = nil, latitude: Double, longitude: Double, location: Data, createdAt: Date? = nil, updatedAt: Date? = nil) {
+    init(id: UUID? = nil, shelterID: UUID, name: String, age: PetAge? = nil, description: String? = nil, personality: String? = nil, idealHome: String? = nil, medicalCondition: String? = nil, adoptionInfo: String? = nil, species: Species, breed: String? = nil, size: PetSize, gender: PetGender, adoptionStatus: AdoptionStatus, imageURLs: [String]? = nil, latitude: Double, longitude: Double, location: String? = nil, createdAt: Date? = nil, updatedAt: Date? = nil) {
         self.id = id
         self.$shelter.id = shelterID
         self.name = name
