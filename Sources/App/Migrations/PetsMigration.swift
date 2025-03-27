@@ -23,7 +23,7 @@ struct PetsMigration: AsyncMigration {
                 .field("longitude", .double, .required)
                 .field("createdAt", .datetime)
                 .field("updatedAt", .datetime)
-                .field("location", .custom("GEOGRAPHY(POINT, 4326)"), .required)
+                .field("location", .custom("GEOGRAPHY(POINT, 4326)"))
                 .create()
         }
 
