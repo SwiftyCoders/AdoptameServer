@@ -219,6 +219,7 @@ struct PetsController: RouteCollection {
             return try await Pet.query(on: req.db)
                 .paginate(for: req)
         } catch {
+            req.logger.error("\(error)")
             throw Abort(.badRequest, reason: "ERROR AL OBTENER TODOS LOS PETS REAL")
         }
     }
