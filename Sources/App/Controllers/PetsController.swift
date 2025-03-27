@@ -94,10 +94,12 @@ struct PetsController: RouteCollection {
                     throw Abort(.internalServerError, reason: "SQLDatabase no accesible.")
                 }
 
-                try await sqlDb.raw("""
-                    UPDATE pets SET location = ST_GeogFromText('SRID=4326;POINT(\(bind: dbPet.longitude) \(bind: dbPet.latitude))')
-                    WHERE id = \(bind: dbPet.requireID())
-                """).run()
+            let locationString = "SRID=4326;POINT(\(dbPet.longitude) \(dbPet.latitude))"
+
+            try await sqlDb.raw("""
+                UPDATE pets SET location = ST_GeogFromText(\(bind: locationString))
+                WHERE id = \(bind: dbPet.requireID())
+            """).run()
             
             return .created
         } catch {
