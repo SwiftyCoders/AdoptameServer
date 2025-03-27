@@ -333,7 +333,7 @@ struct PetResponseModel: Content {
 }
 
 func makeLocationString(lat: Double, lon: Double) -> String {
-    "POINT(\(lon) \(lat))"
+    "SRID=4326;POINT(\(lon) \(lat))"
 }
 
 //@Sendable
