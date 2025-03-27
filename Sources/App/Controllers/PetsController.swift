@@ -2,6 +2,7 @@ import Fluent
 import Vapor
 import FluentKit
 import FluentSQL
+import SQLKit
 
 struct PetsController: RouteCollection {
     func boot(routes: RoutesBuilder) throws {
@@ -83,7 +84,8 @@ struct PetsController: RouteCollection {
                 adoptionStatus: petFormData.adoptionStatus,
                 imageURLs: imageURLs,
                 latitude: userShelter.latitude,
-                longitude: userShelter.longitude
+                longitude: userShelter.longitude,
+                location: makeLocationString(lat: userShelter.latitude, lon: userShelter.longitude)
             )
             
             try await dbPet.save(on: req.db)
@@ -139,28 +141,54 @@ struct PetsController: RouteCollection {
     }
     
     @Sendable
-    func getPetsByDistance(req: Request) async throws -> [PetResponseModel] {
+    func getPetsByDistance(req: Request) async throws -> Page<PetResponseModel> {
         guard let userLat = req.query[Double.self, at: "lat"],
               let userLon = req.query[Double.self, at: "lon"] else {
             throw Abort(.badRequest, reason: "Se requieren los parámetros 'lat' y 'lon'.")
         }
-    
+
         let radius: Double = req.query[Double.self, at: "radius"] ?? 300000
-    
-        let pets = try await Pet.query(on: req.db)
-            .with(\.$shelter)
-            .all()
-    
-        let petsResponse = pets
-            .map { pet -> (PetResponseModel, Double) in
-                let distance = DistanceCalculator.distance(from: userLat,
-                                                           lon1: userLon,
-                                                           to: pet.latitude,
-                                                           lon2: pet.longitude)
-    
-                let response = PetResponseModel(
+        let page = req.query[Int.self, at: "page"] ?? 1
+        let per = req.query[Int.self, at: "per"] ?? 10
+        let offset = (page - 1) * per
+
+        guard let sqlDb = req.db as? SQLDatabase else {
+            throw Abort(.internalServerError, reason: "No se pudo acceder a SQLDatabase.")
+        }
+
+        let countQuery = SQLQueryString("""
+            SELECT COUNT(*) AS total
+            FROM pets
+            WHERE ST_DWithin(pets.location, ST_MakePoint(\(literal: userLon), \(literal: userLat))::geography, \(literal: radius))
+        """)
+        
+        struct CountResult: Decodable { let total: Int }
+        let count = try await sqlDb.raw(countQuery).first(decoding: CountResult.self)?.total ?? 0
+
+        // 🔹 2. Obtener los resultados paginados con distancia
+        let sql = SQLQueryString("""
+            SELECT pets.*, ST_Distance(pets.location, ST_MakePoint(\(literal: userLon), \(literal: userLat))::geography) AS distance
+            FROM pets
+            WHERE ST_DWithin(pets.location, ST_MakePoint(\(literal: userLon), \(literal: userLat))::geography, \(literal: radius))
+            ORDER BY distance ASC
+            LIMIT \(literal: per)
+            OFFSET \(literal: offset)
+        """)
+
+        let pets = try await sqlDb.raw(sql).all(decoding: PetResponseModel.self)
+
+        // 🔹 3. Transformar a PetResponseModel
+        var models: [PetResponseModel] = []
+
+        for pet in pets {
+            guard let shelter = try await Shelter.find(pet.shelter.id, on: req.db) else {
+                throw Abort(.badRequest, reason: "no shelter associated to pet")
+            }
+
+            models.append(
+                PetResponseModel(
                     id: pet.id,
-                    shelter: pet.shelter,
+                    shelter: shelter,
                     name: pet.name,
                     age: pet.age,
                     description: pet.description,
@@ -174,18 +202,15 @@ struct PetsController: RouteCollection {
                     gender: pet.gender,
                     adoptionStatus: pet.adoptionStatus,
                     imageURLs: pet.imageURLs,
-                    distance: distance
+                    distance: pet.distance
                 )
-    
-                return (response, distance)
-            }
-            .filter { _, distance in
-                distance <= radius
-            }
-            .sorted { $0.1 < $1.1 }
-            .map { $0.0 }
-    
-        return petsResponse
+            )
+        }
+
+        return Page(
+            items: models,
+            metadata: PageMetadata(page: page, per: per, total: count)
+        )
     }
     
     @Sendable
@@ -306,7 +331,9 @@ struct PetResponseModel: Content {
     let distance: Double
 }
 
-
+func makeLocationString(lat: Double, lon: Double) -> String {
+    "POINT(\(lon) \(lat))"
+}
 
 //@Sendable
 //func getPetsByDistance(req: Request) async throws -> [PetResponseModel] {
@@ -392,3 +419,58 @@ struct PetResponseModel: Content {
 //        .sorted { $0.1 < $1.1 }
 //        .map { $0.0 }
 //}
+
+
+//VERSION FUNCIONAL
+
+/*
+ @Sendable
+ func getPetsByDistance(req: Request) async throws -> [PetResponseModel] {
+     guard let userLat = req.query[Double.self, at: "lat"],
+           let userLon = req.query[Double.self, at: "lon"] else {
+         throw Abort(.badRequest, reason: "Se requieren los parámetros 'lat' y 'lon'.")
+     }
+ 
+     let radius: Double = req.query[Double.self, at: "radius"] ?? 300000
+ 
+     let pets = try await Pet.query(on: req.db)
+         .with(\.$shelter)
+         .all()
+ 
+     let petsResponse = pets
+         .map { pet -> (PetResponseModel, Double) in
+             let distance = DistanceCalculator.distance(from: userLat,
+                                                        lon1: userLon,
+                                                        to: pet.latitude,
+                                                        lon2: pet.longitude)
+ 
+             let response = PetResponseModel(
+                 id: pet.id,
+                 shelter: pet.shelter,
+                 name: pet.name,
+                 age: pet.age,
+                 description: pet.description,
+                 personality: pet.personality,
+                 idealHome: pet.idealHome,
+                 medicalCondition: pet.medicalCondition,
+                 adoptionInfo: pet.adoptionInfo,
+                 species: pet.species,
+                 breed: pet.breed,
+                 size: pet.size,
+                 gender: pet.gender,
+                 adoptionStatus: pet.adoptionStatus,
+                 imageURLs: pet.imageURLs,
+                 distance: distance
+             )
+ 
+             return (response, distance)
+         }
+         .filter { _, distance in
+             distance <= radius
+         }
+         .sorted { $0.1 < $1.1 }
+         .map { $0.0 }
+ 
+     return petsResponse
+ }
+ */
