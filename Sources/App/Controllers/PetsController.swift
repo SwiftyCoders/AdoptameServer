@@ -85,7 +85,7 @@ struct PetsController: RouteCollection {
                 imageURLs: imageURLs,
                 latitude: userShelter.latitude,
                 longitude: userShelter.longitude,
-                location: makeLocationString(lat: userShelter.latitude, lon: userShelter.longitude)
+                location: makeLocationData(lat: userShelter.latitude, lon: userShelter.longitude)
             )
             
             try await dbPet.save(on: req.db)
@@ -332,8 +332,9 @@ struct PetResponseModel: Content {
     let distance: Double
 }
 
-func makeLocationString(lat: Double, lon: Double) -> String {
-    "SRID=4326;POINT(\(lon) \(lat))"
+func makeLocationData(lat: Double, lon: Double) -> Data {
+    let locationText = "SRID=4326;POINT(\(lon) \(lat))"
+    return locationText.data(using: .utf8)!
 }
 
 //@Sendable
