@@ -64,7 +64,9 @@ struct SheltersController: RouteCollection {
                     address: shelter.address,
                     websiteURL: shelter.websiteURL,
                     imageURL: shelter.imageURL,
-                    description: shelter.description
+                    description: shelter.description,
+                    latitude: shelter.latitude,
+                    longitude: shelter.longitude
                 )
             )
         }
@@ -261,6 +263,8 @@ struct ShelterResponseModel: Content {
     let websiteURL: String
     let imageURL: String
     let description: String
+    let latitude: Double
+    let longitude: Double
 }
 
 //struct ShelterFormData: Content {
