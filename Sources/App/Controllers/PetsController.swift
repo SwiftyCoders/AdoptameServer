@@ -159,7 +159,7 @@ struct PetsController: RouteCollection {
             throw Abort(.badRequest, reason: "Se requieren los parámetros 'lat' y 'lon'.")
         }
 
-        let radius: Double = req.query[Double.self, at: "radius"] ?? 300000
+        let radius: Double = req.query[Double.self, at: "radius"] ?? 3000000
         let page = req.query[Int.self, at: "page"] ?? 1
         let per = req.query[Int.self, at: "per"] ?? 10
         let offset = (page - 1) * per
@@ -177,7 +177,6 @@ struct PetsController: RouteCollection {
         struct CountResult: Decodable { let total: Int }
         let count = try await sqlDb.raw(countQuery).first(decoding: CountResult.self)?.total ?? 0
 
-        // 🔹 2. Obtener los resultados paginados con distancia
         let sql = SQLQueryString("""
             SELECT pets.*, ST_Distance(pets.location, ST_MakePoint(\(literal: userLon), \(literal: userLat))::geography) AS distance
             FROM pets
@@ -189,18 +188,17 @@ struct PetsController: RouteCollection {
 
         let pets = try await sqlDb.raw(sql).all(decoding: PetResponseModel.self)
 
-        // 🔹 3. Transformar a PetResponseModel
         var models: [PetResponseModel] = []
 
         for pet in pets {
-            guard let shelter = try await Shelter.find(pet.shelter.id, on: req.db) else {
-                throw Abort(.badRequest, reason: "no shelter associated to pet")
-            }
+//            guard let shelter = try await Shelter.find(pet.shelter.id, on: req.db) else {
+//                throw Abort(.badRequest, reason: "no shelter associated to pet")
+//            }
 
             models.append(
                 PetResponseModel(
                     id: pet.id,
-                    shelter: shelter,
+//                    shelter: shelter,
                     name: pet.name,
                     age: pet.age,
                     description: pet.description,
@@ -327,7 +325,7 @@ struct PetFormData: Content {
 
 struct PetResponseModel: Content {
     let id: UUID?
-    let shelter: Shelter
+//    let shelter: Shelter
     let name: String
     let age: PetAge?
     let description: String?

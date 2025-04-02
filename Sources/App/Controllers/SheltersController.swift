@@ -22,7 +22,7 @@ struct SheltersController: RouteCollection {
             throw Abort(.badRequest, reason: "Se requieren los parámetros 'lat' y 'lon'.")
         }
         
-        let radius: Double = req.query[Double.self, at: "radius"] ?? 300000
+        let radius: Double = req.query[Double.self, at: "radius"] ?? 3000000
         let earthRadius = 6371000.0
         
         let shelters = try await Shelter.query(on: req.db).all()
