@@ -39,6 +39,9 @@ final class Shelter: Model, Content, @unchecked Sendable {
 
     @Children(for: \.$shelter)
     var pets: [Pet]
+    
+    @OptionalField(key: "location")
+    var location: String?
 
     @Timestamp(key: "createdAt", on: .create)
     var createdAt: Date?
@@ -48,7 +51,7 @@ final class Shelter: Model, Content, @unchecked Sendable {
 
     init() {}
 
-    init(id: UUID? = nil, name: String, contactEmail: String, latitude: Double, longitude: Double, ownerID: UUID, phone: String? = nil, address: String? = nil, websiteURL: String? = nil, imageURL: String? = nil, description: String? = nil) {
+    init(id: UUID? = nil, name: String, contactEmail: String, latitude: Double, longitude: Double, ownerID: UUID, phone: String? = nil, address: String? = nil, websiteURL: String? = nil, imageURL: String? = nil, description: String? = nil, location: String? = nil) {
         self.id = id
         self.name = name
         self.contactEmail = contactEmail
@@ -60,6 +63,7 @@ final class Shelter: Model, Content, @unchecked Sendable {
         self.websiteURL = websiteURL
         self.imageURL = imageURL
         self.description = description
+        self.location = location
     }
 }
 
