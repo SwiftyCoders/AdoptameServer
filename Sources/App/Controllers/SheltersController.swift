@@ -1,6 +1,7 @@
 import Vapor
 import JWT
 import Fluent
+import SQLKit
 
 struct SheltersController: RouteCollection {
     func boot(routes: RoutesBuilder) throws {
@@ -16,55 +17,62 @@ struct SheltersController: RouteCollection {
     }
     
     @Sendable
-    func getSheltersByDistance(req: Request) async throws -> [ShelterResponse] {
+    func getSheltersByDistance(req: Request) async throws -> Page<ShelterResponseModel> {
         guard let userLat = req.query[Double.self, at: "lat"],
               let userLon = req.query[Double.self, at: "lon"] else {
             throw Abort(.badRequest, reason: "Se requieren los parámetros 'lat' y 'lon'.")
         }
         
         let radius: Double = req.query[Double.self, at: "radius"] ?? 3000000
-        let earthRadius = 6371000.0
+        let page = req.query[Int.self, at: "page"] ?? 1
+        let per = req.query[Int.self, at: "per"] ?? 10
+        let offset = (page - 1) * per
         
-        let shelters = try await Shelter.query(on: req.db).all()
+        guard let sqlDb = req.db as? SQLDatabase else {
+            throw Abort(.internalServerError, reason: "No se pudo acceder a SQLDatabase.")
+        }
         
-        let shelterResponses = shelters
-                .map { shelter -> (ShelterResponse, Double) in
-                    let shelterLat = shelter.latitude
-                    let shelterLon = shelter.longitude
-                    
-                    let latDiff = (shelterLat - userLat) * .pi / 180
-                    let lonDiff = (shelterLon - userLon) * .pi / 180
-                    let lat1 = userLat * .pi / 180
-                    let lat2 = shelterLat * .pi / 180
-                    
-                    let a = sin(latDiff / 2) * sin(latDiff / 2) +
-                            cos(lat1) * cos(lat2) *
-                            sin(lonDiff / 2) * sin(lonDiff / 2)
-                    let c = 2 * atan2(sqrt(a), sqrt(1 - a))
-                    let distance = earthRadius * c
-                    
-                    let response = ShelterResponse(
-                        id: shelter.id,
-                        name: shelter.name,
-                        contactEmail: shelter.contactEmail,
-                        phone: shelter.phone,
-                        address: shelter.address,
-                        latitude: shelter.latitude,
-                        longitude: shelter.longitude,
-                        websiteURL: shelter.websiteURL,
-                        imageURL: shelter.imageURL,
-                        description: shelter.description,
-                        distance: distance
-                    )
-                    return (response, distance)
-                }
-                .filter { _, distance in
-                    distance <= radius
-                }
-                .sorted { $0.1 < $1.1 }
-                .map { $0.0 }
-            
-            return shelterResponses
+        let countQuery = SQLQueryString("""
+            SELECT COUNT(*) AS total
+            FROM shelters
+            WHERE ST_DWithin(shelters.location, ST_MakePoint(\(literal: userLon), \(literal: userLat))::geography, \(literal: radius))
+        """)
+        
+        struct CountResult: Decodable { let total: Int }
+        let count = try await sqlDb.raw(countQuery).first(decoding: CountResult.self)?.total ?? 0
+        
+        let sql = SQLQueryString("""
+            SELECT shelters.*, ST_Distance(shelters.location, ST_MakePoint(\(literal: userLon), \(literal: userLat))::geography) AS distance
+            FROM shelters
+            WHERE ST_DWithin(shelters.location, ST_MakePoint(\(literal: userLon), \(literal: userLat))::geography, \(literal: radius))
+            ORDER BY distance ASC
+            LIMIT \(literal: per)
+            OFFSET \(literal: offset)
+        """)
+        
+        let shelters = try await sqlDb.raw(sql).all(decoding: ShelterResponseModel.self)
+        
+        var models: [ShelterResponseModel] = []
+        
+        for shelter in shelters {
+            models.append(
+                ShelterResponseModel(
+                    id: shelter.id,
+                    name: shelter.name,
+                    contactEmail: shelter.contactEmail,
+                    phone: shelter.phone,
+                    address: shelter.address,
+                    websiteURL: shelter.websiteURL,
+                    imageURL: shelter.imageURL,
+                    description: shelter.description
+                )
+            )
+        }
+        
+        return Page(
+            items: models,
+            metadata: PageMetadata(page: page, per: per, total: count)
+        )
     }
     
     @Sendable
@@ -231,6 +239,17 @@ struct ShelterFormData: Content {
     let website: String?
     let address: String?
     let image: File?
+}
+
+struct ShelterResponseModel: Content {
+    let id: UUID
+    let name: String
+    let contactEmail: String
+    let phone: String
+    let address: String
+    let websiteURL: String
+    let imageURL: String
+    let description: String
 }
 
 //struct ShelterFormData: Content {
