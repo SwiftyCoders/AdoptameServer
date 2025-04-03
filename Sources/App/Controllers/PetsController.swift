@@ -16,6 +16,7 @@ struct PetsController: RouteCollection {
         tokenProtected.get("shelter", use: getPetsFromShelter)
         tokenProtected.get("byDistance", use: getPetsByDistance)
         tokenProtected.get("byFilters", use: getPetsByFilter)
+        tokenProtected.get("byShelter", ":shelterID", use: getPetsFromShelterByID)
     }
     
     @Sendable
@@ -251,6 +252,21 @@ struct PetsController: RouteCollection {
         do {
             return try await Pet.query(on: req.db)
                 .filter(\Pet.$shelter.$id == userShelterID)
+                .all()
+        } catch {
+            throw Abort(.notFound, reason: "Cannot get all Pets From Shelter: \(error)")
+        }
+    }
+    
+    @Sendable
+    func getPetsFromShelterByID(req: Request) async throws -> [Pet] {
+        guard let shelterID = req.parameters.get("shelterID", as: UUID.self) else {
+            throw Abort(.badRequest, reason: "Invalid shelterID")
+        }
+        
+        do {
+            return try await Pet.query(on: req.db)
+                .filter(\Pet.$shelter.$id == shelterID)
                 .all()
         } catch {
             throw Abort(.notFound, reason: "Cannot get all Pets From Shelter: \(error)")
