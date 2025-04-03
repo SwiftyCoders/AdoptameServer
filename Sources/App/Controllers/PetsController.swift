@@ -271,7 +271,7 @@ struct PetsController: RouteCollection {
                 .map {
                     PetResponseModel(
                         id: $0.id,
-                        shelterID: $0.shelter.id,
+                        shelterID: $0.$shelter.id,
                         name: $0.name,
                         age: $0.age,
                         description: $0.description,
