@@ -259,7 +259,7 @@ struct PetsController: RouteCollection {
     }
     
     @Sendable
-    func getPetsFromShelterByID(req: Request) async throws -> [Pet] {
+    func getPetsFromShelterByID(req: Request) async throws -> [PetResponseModel] {
         guard let shelterID = req.parameters.get("shelterID", as: UUID.self) else {
             throw Abort(.badRequest, reason: "Invalid shelterID")
         }
@@ -268,6 +268,26 @@ struct PetsController: RouteCollection {
             return try await Pet.query(on: req.db)
                 .filter(\Pet.$shelter.$id == shelterID)
                 .all()
+                .map {
+                    PetResponseModel(
+                        id: $0.id,
+                        shelterID: $0.shelter.id,
+                        name: $0.name,
+                        age: $0.age,
+                        description: $0.description,
+                        personality: $0.personality,
+                        idealHome: $0.idealHome,
+                        medicalCondition: $0.medicalCondition,
+                        adoptionInfo: $0.adoptionInfo,
+                        species: $0.species,
+                        breed: $0.breed,
+                        size: $0.size,
+                        gender: $0.gender,
+                        adoptionStatus: $0.adoptionStatus,
+                        imageURLs: $0.imageURLs,
+                        distance: 0.0
+                    )
+                }
         } catch {
             throw Abort(.notFound, reason: "Cannot get all Pets From Shelter: \(error)")
         }
@@ -337,7 +357,7 @@ struct PetFormData: Content {
 
 struct PetResponseModel: Content {
     let id: UUID?
-    let shelterID: UUID
+    let shelterID: UUID?
     let name: String
     let age: PetAge?
     let description: String?
