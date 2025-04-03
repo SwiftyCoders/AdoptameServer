@@ -181,7 +181,7 @@ struct PetsController: RouteCollection {
             SELECT pets.*, ST_Distance(pets.location, ST_MakePoint(\(literal: userLon), \(literal: userLat))::geography) AS distance
             FROM pets
             WHERE ST_DWithin(pets.location, ST_MakePoint(\(literal: userLon), \(literal: userLat))::geography, \(literal: radius))
-            ORDER BY distance ASC
+            ORDER BY distance ASC, id ASC
             LIMIT \(literal: per)
             OFFSET \(literal: offset)
         """)
