@@ -191,14 +191,10 @@ struct PetsController: RouteCollection {
         var models: [PetResponseModel] = []
 
         for pet in pets {
-//            guard let shelter = try await Shelter.find(pet.shelter.id, on: req.db) else {
-//                throw Abort(.badRequest, reason: "no shelter associated to pet")
-//            }
-
             models.append(
                 PetResponseModel(
                     id: pet.id,
-//                    shelter: shelter,
+                    shelterID: pet.shelterID,
                     name: pet.name,
                     age: pet.age,
                     description: pet.description,
@@ -325,7 +321,7 @@ struct PetFormData: Content {
 
 struct PetResponseModel: Content {
     let id: UUID?
-//    let shelter: Shelter
+    let shelterID: UUID
     let name: String
     let age: PetAge?
     let description: String?
