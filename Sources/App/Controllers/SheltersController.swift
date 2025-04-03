@@ -109,15 +109,14 @@ struct SheltersController: RouteCollection {
             throw Abort(.notFound, reason: "Shelter not found")
         }
         
-        let updatedShelter = try req.content.decode(Shelter.self)
+        let updatedShelter = try req.content.decode(PostShelterResponseModel.self)
         shelter.name = updatedShelter.name
         shelter.contactEmail = updatedShelter.contactEmail
         shelter.phone = updatedShelter.phone
         shelter.address = updatedShelter.address
         shelter.latitude = updatedShelter.latitude
         shelter.longitude = updatedShelter.longitude
-        shelter.websiteURL = updatedShelter.websiteURL
-        shelter.imageURL = updatedShelter.imageURL
+        shelter.websiteURL = updatedShelter.website
         shelter.description = updatedShelter.description
         
         try await shelter.save(on: req.db)
@@ -253,6 +252,18 @@ struct ShelterFormData: Content {
     let website: String?
     let address: String?
     let image: File?
+}
+
+struct PostShelterResponseModel: Content {
+    let name: String
+    let description: String
+    let adoptionPolicy: String
+    let phone: String
+    let address: String
+    let contactEmail: String
+    let website: String
+    let latitude: Double
+    let longitude: Double
 }
 
 struct ShelterResponseModel: Content {
