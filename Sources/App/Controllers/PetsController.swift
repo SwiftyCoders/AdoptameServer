@@ -290,6 +290,9 @@ struct PetsController: RouteCollection {
         """)
 
         let pets = try await sqlDb.raw(sql).all(decoding: PetResponseModel.self)
+        print(pets.count)
+        print(specieString)
+        print("CountQuery: \(countQuery)")
 
         var models: [PetResponseModel] = []
 
