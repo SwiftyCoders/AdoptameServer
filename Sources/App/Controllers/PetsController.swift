@@ -164,7 +164,7 @@ struct PetsController: RouteCollection {
 
         let radius: Double = req.query[Double.self, at: "radius"] ?? 3000000
         let page = req.query[Int.self, at: "page"] ?? 1
-        let per = req.query[Int.self, at: "per"] ?? 5
+        let per = req.query[Int.self, at: "per"] ?? 20
         let offset = (page - 1) * per
 
         guard let sqlDb = req.db as? SQLDatabase else {
@@ -247,7 +247,7 @@ struct PetsController: RouteCollection {
 
         let radius: Double = req.query[Double.self, at: "radius"] ?? 3000000
         let page = req.query[Int.self, at: "page"] ?? 1
-        let per = req.query[Int.self, at: "per"] ?? 5
+        let per = req.query[Int.self, at: "per"] ?? 20
         let offset = (page - 1) * per
 
         guard let sqlDb = req.db as? SQLDatabase else {
