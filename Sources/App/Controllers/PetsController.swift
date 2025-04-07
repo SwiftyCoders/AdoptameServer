@@ -191,8 +191,6 @@ struct PetsController: RouteCollection {
 
         let pets = try await sqlDb.raw(sql).all(decoding: PetResponseModel.self)
 
-        print("COUNT QUERY DISTANCE PETS: \(countQuery)")
-        
         var models: [PetResponseModel] = []
 
         for pet in pets {
@@ -237,6 +235,11 @@ struct PetsController: RouteCollection {
     
     @Sendable
     func getPetsBySpecie(req: Request) async throws -> Page<PetResponseModel> {
+        guard let specieString = req.parameters.get("specie", as: String.self),
+              let specieEnum = Species(rawValue: specieString) else {
+            throw Abort(.badRequest, reason: "Specie type not found or invalid")
+        }
+        
         guard let userLat = req.query[Double.self, at: "lat"],
               let userLon = req.query[Double.self, at: "lon"] else {
             throw Abort(.badRequest, reason: "Se requieren los parámetros 'lat' y 'lon'.")
@@ -255,6 +258,7 @@ struct PetsController: RouteCollection {
             SELECT COUNT(*) AS total
             FROM pets
             WHERE ST_DWithin(pets.location, ST_MakePoint(\(literal: userLon), \(literal: userLat))::geography, \(literal: radius))
+              AND pets.species = \(literal: specieEnum.rawValue)
         """)
         
         struct CountResult: Decodable { let total: Int }
@@ -264,13 +268,12 @@ struct PetsController: RouteCollection {
             SELECT pets.*, ST_Distance(pets.location, ST_MakePoint(\(literal: userLon), \(literal: userLat))::geography) AS distance
             FROM pets
             WHERE ST_DWithin(pets.location, ST_MakePoint(\(literal: userLon), \(literal: userLat))::geography, \(literal: radius))
+              AND pets.species = \(literal: specieEnum.rawValue)
             ORDER BY distance ASC, id ASC
             LIMIT \(literal: per)
             OFFSET \(literal: offset)
         """)
 
-        print("COUNT QUERY: \(countQuery)")
-        
         let pets = try await sqlDb.raw(sql).all(decoding: PetResponseModel.self)
 
         var models: [PetResponseModel] = []
