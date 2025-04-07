@@ -235,18 +235,11 @@ struct PetsController: RouteCollection {
     
     @Sendable
     func getPetsBySpecie(req: Request) async throws -> Page<PetResponseModel> {
-        print("ENTRO A OBTENER ESPECIES")
-        guard let specieString = req.parameters.get("specie", as: String.self),
-              let specieEnum = Species(rawValue: specieString) else {
-            throw Abort(.badRequest, reason: "Specie type not found or invalid")
-        }
-        
         guard let userLat = req.query[Double.self, at: "lat"],
               let userLon = req.query[Double.self, at: "lon"] else {
             throw Abort(.badRequest, reason: "Se requieren los parámetros 'lat' y 'lon'.")
         }
 
-        print("LLEGO AQUÍ UNO")
         let radius: Double = req.query[Double.self, at: "radius"] ?? 3000000
         let page = req.query[Int.self, at: "page"] ?? 1
         let per = req.query[Int.self, at: "per"] ?? 5
@@ -256,33 +249,15 @@ struct PetsController: RouteCollection {
             throw Abort(.internalServerError, reason: "No se pudo acceder a SQLDatabase.")
         }
 
-//        let countQuery = SQLQueryString("""
-//            SELECT COUNT(*) AS total
-//            FROM pets
-//            WHERE ST_DWithin(pets.location, ST_MakePoint(\(literal: userLon), \(literal: userLat))::geography, \(literal: radius))
-//              AND pets.species = \(literal: specieEnum.rawValue)
-//        """)
-        print("LLEGO AQUÍ DOS")
         let countQuery = SQLQueryString("""
             SELECT COUNT(*) AS total
             FROM pets
             WHERE ST_DWithin(pets.location, ST_MakePoint(\(literal: userLon), \(literal: userLat))::geography, \(literal: radius))
         """)
-        print("LLEGO AQUÍ TRES")
-
+        
         struct CountResult: Decodable { let total: Int }
         let count = try await sqlDb.raw(countQuery).first(decoding: CountResult.self)?.total ?? 0
 
-//        let sql = SQLQueryString("""
-//            SELECT pets.*, ST_Distance(pets.location, ST_MakePoint(\(literal: userLon), \(literal: userLat))::geography) AS distance
-//            FROM pets
-//            WHERE ST_DWithin(pets.location, ST_MakePoint(\(literal: userLon), \(literal: userLat))::geography, \(literal: radius))
-//              AND pets.species = \(literal: specieEnum.rawValue)
-//            ORDER BY distance ASC, id ASC
-//            LIMIT \(literal: per)
-//            OFFSET \(literal: offset)
-//        """)
-        print("LLEGO AQUÍ CUATRO")
         let sql = SQLQueryString("""
             SELECT pets.*, ST_Distance(pets.location, ST_MakePoint(\(literal: userLon), \(literal: userLat))::geography) AS distance
             FROM pets
@@ -293,9 +268,6 @@ struct PetsController: RouteCollection {
         """)
 
         let pets = try await sqlDb.raw(sql).all(decoding: PetResponseModel.self)
-        print(pets.count)
-        print(specieString)
-        print("CountQuery: \(countQuery)")
 
         var models: [PetResponseModel] = []
 
