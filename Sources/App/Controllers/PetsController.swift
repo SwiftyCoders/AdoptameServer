@@ -254,21 +254,36 @@ struct PetsController: RouteCollection {
             throw Abort(.internalServerError, reason: "No se pudo acceder a SQLDatabase.")
         }
 
+//        let countQuery = SQLQueryString("""
+//            SELECT COUNT(*) AS total
+//            FROM pets
+//            WHERE ST_DWithin(pets.location, ST_MakePoint(\(literal: userLon), \(literal: userLat))::geography, \(literal: radius))
+//              AND pets.species = \(literal: specieEnum.rawValue)
+//        """)
+        
         let countQuery = SQLQueryString("""
             SELECT COUNT(*) AS total
             FROM pets
             WHERE ST_DWithin(pets.location, ST_MakePoint(\(literal: userLon), \(literal: userLat))::geography, \(literal: radius))
-              AND pets.species = \(literal: specieEnum.rawValue)
         """)
         
         struct CountResult: Decodable { let total: Int }
         let count = try await sqlDb.raw(countQuery).first(decoding: CountResult.self)?.total ?? 0
 
+//        let sql = SQLQueryString("""
+//            SELECT pets.*, ST_Distance(pets.location, ST_MakePoint(\(literal: userLon), \(literal: userLat))::geography) AS distance
+//            FROM pets
+//            WHERE ST_DWithin(pets.location, ST_MakePoint(\(literal: userLon), \(literal: userLat))::geography, \(literal: radius))
+//              AND pets.species = \(literal: specieEnum.rawValue)
+//            ORDER BY distance ASC, id ASC
+//            LIMIT \(literal: per)
+//            OFFSET \(literal: offset)
+//        """)
+        
         let sql = SQLQueryString("""
             SELECT pets.*, ST_Distance(pets.location, ST_MakePoint(\(literal: userLon), \(literal: userLat))::geography) AS distance
             FROM pets
             WHERE ST_DWithin(pets.location, ST_MakePoint(\(literal: userLon), \(literal: userLat))::geography, \(literal: radius))
-              AND pets.species = \(literal: specieEnum.rawValue)
             ORDER BY distance ASC, id ASC
             LIMIT \(literal: per)
             OFFSET \(literal: offset)
