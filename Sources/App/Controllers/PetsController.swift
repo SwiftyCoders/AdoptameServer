@@ -191,6 +191,8 @@ struct PetsController: RouteCollection {
 
         let pets = try await sqlDb.raw(sql).all(decoding: PetResponseModel.self)
 
+        print("COUNT QUERY DISTANCE PETS: \(countQuery)")
+        
         var models: [PetResponseModel] = []
 
         for pet in pets {
@@ -267,6 +269,8 @@ struct PetsController: RouteCollection {
             OFFSET \(literal: offset)
         """)
 
+        print("COUNT QUERY: \(countQuery)")
+        
         let pets = try await sqlDb.raw(sql).all(decoding: PetResponseModel.self)
 
         var models: [PetResponseModel] = []
