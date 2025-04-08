@@ -355,6 +355,10 @@ func sendPasswordResetEmail(to email: String, with token: String, on req: Reques
         .joined(separator: "&")
         .data(using: .utf8) ?? Data()
     
+    print("🔐 Mailgun URL:", mailgunURL)
+    print("🔐 Authorization:", "Basic \(encodedAuth)")
+    print("🔐 Headers:", headers)
+    
     print("LLEGO AQUÍ TRES")
     
     let response = try await req.client.post(mailgunURL, headers: headers) { request in
