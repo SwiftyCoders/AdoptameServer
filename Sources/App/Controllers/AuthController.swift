@@ -347,39 +347,69 @@ func sendPasswordResetEmail(to email: String, with token: String, on req: Reques
     
     print("LLEGO AQUÍ DOS")
     
-    let headers: HTTPHeaders = [
-        "Authorization": "Basic \(encodedAuth)",
-        "Content-Type": "application/x-www-form-urlencoded"
-    ]
+//    let headers: HTTPHeaders = [
+//        "Authorization": "Basic \(encodedAuth)",
+//        "Content-Type": "application/x-www-form-urlencoded"
+//    ]
+    
+//    let bodyEncoded = formData
+//        .map { "\($0.key)=\($0.value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")" }
+//        .joined(separator: "&")
+//        .data(using: .utf8) ?? Data()
+
+    
+    print("LLEGO AQUÍ TRES")
     
     let bodyEncoded = formData
         .map { "\($0.key)=\($0.value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")" }
         .joined(separator: "&")
         .data(using: .utf8) ?? Data()
+
+    var headers = HTTPHeaders()
+    headers.add(name: "Authorization", value: "Basic \(encodedAuth)")
+    headers.add(name: "Content-Type", value: "application/x-www-form-urlencoded")
+    headers.add(name: "User-Agent", value: "curl/7.79.1") // <--- esto es CLAVE
+
+    let request = ClientRequest(
+        method: .POST,
+        url: mailgunURL,
+        headers: headers,
+        body: .init(data: bodyEncoded)
+    )
     
     print("🔐 Mailgun URL:", mailgunURL)
     print("🔐 Authorization:", "Basic \(encodedAuth)")
     print("🔐 Headers:", headers)
-    
-    print("LLEGO AQUÍ TRES")
-    
+
     do {
-        let response = try await req.client.post(mailgunURL, headers: headers) { request in
-            request.body = .init(data: bodyEncoded)
-        }
-
+        let response = try await req.client.send(request)
         print("✅ Mailgun respondió:", response.status)
-        if let responseBody = response.body?.getString(at: 0, length: response.body?.readableBytes ?? 0) {
-            print("📨 Body Mailgun:", responseBody)
-        }
         
-        print("LLEGO AQUÍ CUATRO")
-        print(response.status.code)
-        print("RESPONSE: \(response)")
-
+        if let buffer = response.body,
+           let string = buffer.getString(at: 0, length: buffer.readableBytes) {
+            print("📨 Body Mailgun:", string)
+        }
     } catch {
         print("❌ ERROR enviando email con Mailgun:", error)
     }
+    
+//    do {
+//        let response = try await req.client.post(mailgunURL, headers: headers) { request in
+//            request.body = .init(data: bodyEncoded)
+//        }
+//
+//        print("✅ Mailgun respondió:", response.status)
+//        if let responseBody = response.body?.getString(at: 0, length: response.body?.readableBytes ?? 0) {
+//            print("📨 Body Mailgun:", responseBody)
+//        }
+//        
+//        print("LLEGO AQUÍ CUATRO")
+//        print(response.status.code)
+//        print("RESPONSE: \(response)")
+//
+//    } catch {
+//        print("❌ ERROR enviando email con Mailgun:", error)
+//    }
     
 //    let response = try await req.client.post(mailgunURL, headers: headers) { request in
 //        request.body = .init(data: bodyEncoded)
