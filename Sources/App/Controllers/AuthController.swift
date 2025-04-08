@@ -321,6 +321,8 @@ func sendPasswordResetEmail(to email: String, with token: String, on req: Reques
         throw Abort(.internalServerError)
     }
     
+    print("🧪 API KEY (env):", Environment.get("MAILGUN_API_KEY") ?? "❌")
+    
     print(domain)
     print(apiKey)
     print(region)
