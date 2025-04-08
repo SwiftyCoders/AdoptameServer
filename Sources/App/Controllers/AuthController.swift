@@ -321,6 +321,8 @@ func sendPasswordResetEmail(to email: String, with token: String, on req: Reques
         throw Abort(.internalServerError)
     }
     
+    print("LLEGO AQUÍ UNO")
+    
     let mailgunURL = URI(string: "https://api.\(region).mailgun.net/v3/\(domain)/messages")
     
     let resetLink = "https://rescuemeapp.es/reset-password?token=\(token)"
@@ -337,6 +339,8 @@ func sendPasswordResetEmail(to email: String, with token: String, on req: Reques
     let basicAuth = "api:\(apiKey)"
     let encodedAuth = Data(basicAuth.utf8).base64EncodedString()
     
+    print("LLEGO AQUÍ DOS")
+    
     let headers: HTTPHeaders = [
         "Authorization": "Basic \(encodedAuth)",
         "Content-Type": "application/x-www-form-urlencoded"
@@ -347,7 +351,12 @@ func sendPasswordResetEmail(to email: String, with token: String, on req: Reques
         .joined(separator: "&")
         .data(using: .utf8) ?? Data()
     
-    _ = try await req.client.post(mailgunURL, headers: headers) { request in
+    print("LLEGO AQUÍ TRES")
+    
+    let response = try await req.client.post(mailgunURL, headers: headers) { request in
         request.body = .init(data: bodyEncoded)
     }
+    
+    print("LLEGO AQUÍ CUATRO")
+    print(response.status.code)
 }
