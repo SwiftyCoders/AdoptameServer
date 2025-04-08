@@ -336,8 +336,8 @@ func sendPasswordResetEmail(to email: String, with token: String, on req: Reques
     let body = "Hola,\n\nHaz clic en este enlace para restablecer tu contraseña:\n\n\(resetLink)\n\nSi no has solicitado esto, ignora el mensaje."
     
     let formData: [String: String] = [
-        "from": "RescueMe <mailgun@\(domain)>",
-        "to": email,
+        "from": "Excited User <mailgun@mg.rescuemeapp.es>",
+        "to": "tyrion72@gmail.com",
         "subject": "Recupera tu contraseña",
         "text": body
     ]
