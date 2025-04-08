@@ -321,6 +321,10 @@ func sendPasswordResetEmail(to email: String, with token: String, on req: Reques
         throw Abort(.internalServerError)
     }
     
+    print(domain)
+    print(apiKey)
+    print(region)
+    
     print("LLEGO AQUÍ UNO")
     
     let mailgunURL = URI(string: "https://api.\(region).mailgun.net/v3/\(domain)/messages")
@@ -359,4 +363,5 @@ func sendPasswordResetEmail(to email: String, with token: String, on req: Reques
     
     print("LLEGO AQUÍ CUATRO")
     print(response.status.code)
+    print("RESPONSE: \(response)")
 }
