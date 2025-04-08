@@ -29,6 +29,7 @@ public func configure(_ app: Application) async throws {
         throw Abort(.internalServerError, reason: "Database not configured.")
     }
 
+    app.migrations.add(PasswordResetMigration())
     app.migrations.add(UsersMigration())
     app.migrations.add(UserTokensMigration())
     app.migrations.add(ShelterCodesMigration())

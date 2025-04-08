@@ -7,20 +7,20 @@ struct UserAuthenticator: AsyncMiddleware {
         guard let token = request.headers.bearerAuthorization?.token else {
             return try await next.respond(to: request)
         }
-
+        
         guard let keys = request.application.storage[JWTKeysStorageKey.self] else {
             throw Abort(.internalServerError, reason: "JWTKeyCollection no configurada")
         }
-
+        
         do {
             let payload = try await keys.verify(token, as: UserPayload.self)
-
+            
             guard let user = try await User.find(payload.userID, on: request.db) else {
                 throw Abort(.unauthorized, reason: "Invalid token: user not found")
             }
-
+            
             request.auth.login(user)
-
+            
             return try await next.respond(to: request)
         } catch let abort as AbortError where abort.status == .unauthorized {
             throw abort
@@ -36,7 +36,7 @@ struct UserAuthenticator: AsyncMiddleware {
 //        guard let token = request.headers.bearerAuthorization?.token else {
 //            return try await next.respond(to: request)
 //        }
-//        
+//
 //        guard let keys = request.application.storage[JWTKeysStorageKey.self] else {
 //            throw Abort(.internalServerError, reason: "JWTKeyCollection no configurada")
 //        }
@@ -68,13 +68,13 @@ struct UserAuthenticator: AsyncMiddleware {
 //        guard let token = request.headers.bearerAuthorization?.token else {
 //            return try await next.respond(to: request)
 //        }
-//        
+//
 //        print(token)
-//        
+//
 //        guard let keys = request.application.storage[JWTKeysStorageKey.self] else {
 //            throw Abort(.internalServerError, reason: "JWTKeyCollection no configurada")
 //        }
-//        
+//
 //        do {
 //            print("🔍 Verificando token: \(token)")
 //            let payload = try await keys.verify(token, as: UserPayload.self)
@@ -106,9 +106,35 @@ struct AuthController: RouteCollection {
         authRoute.post("apple", use: signInWithApple)
         authRoute.post("login", use: loginUser)
         
+        authRoute.post("forgot-password", use: forgotPassword)
+        
         let protectedRoutes = authRoute.grouped(UserAuthenticator())
         protectedRoutes.get(use: getUser)
         protectedRoutes.post("update", use: updateUser)
+    }
+    
+    @Sendable
+    func forgotPassword(req: Request) async throws -> HTTPStatus {
+        let data = try req.content.decode(ForgotPasswordRequest.self)
+        
+        guard let user = try await User.query(on: req.db)
+            .filter(\.$email == data.email)
+            .first() else { return .ok }
+        
+        let token = [UUID().uuidString, UUID().uuidString].joined()
+        let expiresAt = Date().addingTimeInterval(3600)
+        
+        let resetToken = PasswordResetToken(
+            token: token,
+            userID: try user.requireID(),
+            expiresAt: expiresAt
+        )
+        
+        try await resetToken.save(on: req.db)
+        
+        try await sendPasswordResetEmail(to: data.email, with: token, on: req)
+        
+        return .ok
     }
     
     @Sendable
@@ -226,16 +252,16 @@ struct AuthController: RouteCollection {
     @Sendable
     func getUser(req: Request) async throws -> User {
         let user = try req.auth.require(User.self)
-//        guard let bearer = req.headers.bearerAuthorization else {
-//            throw Abort(.unauthorized, reason: "No token provided")
-//        }
-//
-//        let payload = try await req.jwt.verify(bearer.token, as: UserPayload.self)
-//        
-//        guard let user = try await User.find(payload.userID, on: req.db) else {
-//            throw Abort(.unauthorized, reason: "Usuario no encontrado")
-//        }
-//        req.auth.login(user)
+        //        guard let bearer = req.headers.bearerAuthorization else {
+        //            throw Abort(.unauthorized, reason: "No token provided")
+        //        }
+        //
+        //        let payload = try await req.jwt.verify(bearer.token, as: UserPayload.self)
+        //
+        //        guard let user = try await User.find(payload.userID, on: req.db) else {
+        //            throw Abort(.unauthorized, reason: "Usuario no encontrado")
+        //        }
+        //        req.auth.login(user)
         
         print(user.role)
         
@@ -285,3 +311,43 @@ struct LoginRequest: Content {
     let password: String
 }
 
+func sendPasswordResetEmail(to email: String, with token: String, on req: Request) async throws {
+    guard
+        let apiKey = Environment.get("MAILGUN_API_KEY"),
+        let domain = Environment.get("MAILGUN_DOMAIN"),
+        let region = Environment.get("MAILGUN_REGION")
+    else {
+        req.logger.error("❌ Faltan variables de entorno para Mailgun.")
+        throw Abort(.internalServerError)
+    }
+    
+    let mailgunURL = URI(string: "https://api.\(region).mailgun.net/v3/\(domain)/messages")
+    
+    let resetLink = "https://rescuemeapp.es/reset-password?token=\(token)"
+    
+    let body = "Hola,\n\nHaz clic en este enlace para restablecer tu contraseña:\n\n\(resetLink)\n\nSi no has solicitado esto, ignora el mensaje."
+    
+    let formData: [String: String] = [
+        "from": "RescueMe <no-reply@\(domain)>",
+        "to": email,
+        "subject": "Recupera tu contraseña",
+        "text": body
+    ]
+    
+    let basicAuth = "api:\(apiKey)"
+    let encodedAuth = Data(basicAuth.utf8).base64EncodedString()
+    
+    let headers: HTTPHeaders = [
+        "Authorization": "Basic \(encodedAuth)",
+        "Content-Type": "application/x-www-form-urlencoded"
+    ]
+    
+    let bodyEncoded = formData
+        .map { "\($0.key)=\($0.value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")" }
+        .joined(separator: "&")
+        .data(using: .utf8) ?? Data()
+    
+    _ = try await req.client.post(mailgunURL, headers: headers) { request in
+        request.body = .init(data: bodyEncoded)
+    }
+}
