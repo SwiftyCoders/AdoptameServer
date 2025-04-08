@@ -363,11 +363,25 @@ func sendPasswordResetEmail(to email: String, with token: String, on req: Reques
     
     print("LLEGO AQUÍ TRES")
     
-    let response = try await req.client.post(mailgunURL, headers: headers) { request in
-        request.body = .init(data: bodyEncoded)
+    do {
+        let response = try await req.client.post(mailgunURL, headers: headers) { request in
+            request.body = .init(data: bodyEncoded)
+        }
+
+        print("✅ Mailgun respondió:", response.status)
+        if let responseBody = response.body?.getString(at: 0, length: response.body?.readableBytes ?? 0) {
+            print("📨 Body Mailgun:", responseBody)
+        }
+        
+        print("LLEGO AQUÍ CUATRO")
+        print(response.status.code)
+        print("RESPONSE: \(response)")
+
+    } catch {
+        print("❌ ERROR enviando email con Mailgun:", error)
     }
     
-    print("LLEGO AQUÍ CUATRO")
-    print(response.status.code)
-    print("RESPONSE: \(response)")
+//    let response = try await req.client.post(mailgunURL, headers: headers) { request in
+//        request.body = .init(data: bodyEncoded)
+//    }
 }
