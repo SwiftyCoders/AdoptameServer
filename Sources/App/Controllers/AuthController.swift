@@ -321,14 +321,6 @@ func sendPasswordResetEmail(to email: String, with token: String, on req: Reques
         throw Abort(.internalServerError)
     }
     
-    print("🧪 API KEY (env):", Environment.get("MAILGUN_API_KEY") ?? "❌")
-    
-    print(domain)
-    print(apiKey)
-    print(region)
-    
-    print("LLEGO AQUÍ UNO")
-    
     let mailgunURL = URI(string: "https://api.\(region).mailgun.net/v3/\(domain)/messages")
     
     let resetLink = "https://rescuemeapp.es/reset-password?token=\(token)"
@@ -336,8 +328,8 @@ func sendPasswordResetEmail(to email: String, with token: String, on req: Reques
     let body = "Hola,\n\nHaz clic en este enlace para restablecer tu contraseña:\n\n\(resetLink)\n\nSi no has solicitado esto, ignora el mensaje."
     
     let formData: [String: String] = [
-        "from": "Excited User <mailgun@mg.rescuemeapp.es>",
-        "to": "tyrion72@gmail.com",
+        "from": "Excited User <mailgun@\(domain)>",
+        "to": email,
         "subject": "Recupera tu contraseña",
         "text": body
     ]
@@ -345,30 +337,16 @@ func sendPasswordResetEmail(to email: String, with token: String, on req: Reques
     let basicAuth = "api:\(apiKey)"
     let encodedAuth = Data(basicAuth.utf8).base64EncodedString()
     
-    print("LLEGO AQUÍ DOS")
     
-//    let headers: HTTPHeaders = [
-//        "Authorization": "Basic \(encodedAuth)",
-//        "Content-Type": "application/x-www-form-urlencoded"
-//    ]
-    
-//    let bodyEncoded = formData
-//        .map { "\($0.key)=\($0.value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")" }
-//        .joined(separator: "&")
-//        .data(using: .utf8) ?? Data()
-
-    
-    print("LLEGO AQUÍ TRES")
+    let headers: HTTPHeaders = [
+        "Authorization": "Basic \(encodedAuth)",
+        "Content-Type": "application/x-www-form-urlencoded"
+    ]
     
     let bodyEncoded = formData
         .map { "\($0.key)=\($0.value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")" }
         .joined(separator: "&")
         .data(using: .utf8) ?? Data()
-
-    var headers = HTTPHeaders()
-    headers.add(name: "Authorization", value: "Basic \(encodedAuth)")
-    headers.add(name: "Content-Type", value: "application/x-www-form-urlencoded")
-    headers.add(name: "User-Agent", value: "curl/7.79.1") // <--- esto es CLAVE
 
     let request = ClientRequest(
         method: .POST,
@@ -376,10 +354,6 @@ func sendPasswordResetEmail(to email: String, with token: String, on req: Reques
         headers: headers,
         body: .init(data: bodyEncoded)
     )
-    
-    print("🔐 Mailgun URL:", mailgunURL)
-    print("🔐 Authorization:", "Basic \(encodedAuth)")
-    print("🔐 Headers:", headers)
 
     do {
         let response = try await req.client.send(request)
@@ -392,26 +366,4 @@ func sendPasswordResetEmail(to email: String, with token: String, on req: Reques
     } catch {
         print("❌ ERROR enviando email con Mailgun:", error)
     }
-    
-//    do {
-//        let response = try await req.client.post(mailgunURL, headers: headers) { request in
-//            request.body = .init(data: bodyEncoded)
-//        }
-//
-//        print("✅ Mailgun respondió:", response.status)
-//        if let responseBody = response.body?.getString(at: 0, length: response.body?.readableBytes ?? 0) {
-//            print("📨 Body Mailgun:", responseBody)
-//        }
-//        
-//        print("LLEGO AQUÍ CUATRO")
-//        print(response.status.code)
-//        print("RESPONSE: \(response)")
-//
-//    } catch {
-//        print("❌ ERROR enviando email con Mailgun:", error)
-//    }
-    
-//    let response = try await req.client.post(mailgunURL, headers: headers) { request in
-//        request.body = .init(data: bodyEncoded)
-//    }
 }
