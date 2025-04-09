@@ -105,7 +105,7 @@ struct AuthController: RouteCollection {
         authRoute.post("create", use: createUser)
         authRoute.post("apple", use: signInWithApple)
         authRoute.post("login", use: loginUser)
-        authRoute.get("reset-password", use: resetPassword)
+        authRoute.get("reset-password", ":token", use: resetPassword)
         authRoute.post("forgot-password", use: forgotPassword)
         
         let protectedRoutes = authRoute.grouped(UserAuthenticator())
@@ -115,7 +115,9 @@ struct AuthController: RouteCollection {
     
     @Sendable
     func resetPassword(req: Request) async throws -> HTTPStatus {
-        .ok
+        let token = req.parameters.get("token") ?? "sin token"
+           print("🔐 Token recibido:", token)
+           return .ok
     }
     
     @Sendable
