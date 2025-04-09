@@ -3,7 +3,7 @@ import Vapor
 
 func routes(_ app: Application) throws {
     app.get(".well-known", "apple-app-site-association") { req -> Response in
-        let path = req.application.directory.publicDirectory + ".well-known/apple-app-site-association"
+        let path = req.application.directory.resourcesDirectory + "apple-app-site-association"
         let data = try Data(contentsOf: URL(fileURLWithPath: path))
         var headers = HTTPHeaders()
         headers.add(name: .contentType, value: "application/json")
