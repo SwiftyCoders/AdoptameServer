@@ -106,12 +106,22 @@ struct AuthController: RouteCollection {
         authRoute.post("apple", use: signInWithApple)
         authRoute.post("login", use: loginUser)
         authRoute.get("reset-password", use: resetPassword)
+        authRoute.get(".well-known", "apple-app-site-association", use: wellKnown)
         
         authRoute.post("forgot-password", use: forgotPassword)
         
         let protectedRoutes = authRoute.grouped(UserAuthenticator())
         protectedRoutes.get(use: getUser)
         protectedRoutes.post("update", use: updateUser)
+    }
+    
+    @Sendable
+    func wellKnown(req: Request) async throws -> Response {
+        let path = req.application.directory.publicDirectory + ".well-known/apple-app-site-association"
+        let data = try Data(contentsOf: URL(fileURLWithPath: path))
+        var headers = HTTPHeaders()
+        headers.add(name: .contentType, value: "application/json")
+        return Response(status: .ok, headers: headers, body: .init(data: data))
     }
     
     @Sendable
