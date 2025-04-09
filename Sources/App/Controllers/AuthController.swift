@@ -330,7 +330,7 @@ func sendPasswordResetEmail(to email: String, with token: String, on req: Reques
     
     let mailgunURL = URI(string: "https://api.\(region).mailgun.net/v3/\(domain)/messages")
     
-    let resetLink = "https://rescuemeapp.es/reset-password?token=\(token)"
+    let resetLink = "https://rescuemeapp.es/auth/reset-password/\(token)"
     
     let body = "Hola,\n\nHaz clic en este enlace para restablecer tu contraseña:\n\n\(resetLink)\n\nSi no has solicitado esto, ignora el mensaje."
     
