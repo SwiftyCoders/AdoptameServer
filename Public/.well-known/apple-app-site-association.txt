@@ -1,0 +1,11 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "5X587S7WGV.com.Bito.RescueMe",
+        "paths": [ "/reset-password/*" ]
+      }
+    ]
+  }
+}
