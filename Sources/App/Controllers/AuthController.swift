@@ -118,12 +118,13 @@ struct AuthController: RouteCollection {
     @Sendable
     func validateResetToken(req: Request) async throws -> HTTPStatus {
         print(req.parameters.get("token"))
-        
+        print("ENTRO EN EL MÉTODO")
         guard let token = req.parameters.get("token"),
               let resetToken = try await PasswordResetToken.query(on: req.db)
                 .filter(\.$token == token)
                 .first()
         else {
+            print("PASO POR AQUÍ")
             throw Abort(.notFound)
         }
 
