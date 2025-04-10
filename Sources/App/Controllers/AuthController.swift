@@ -108,10 +108,32 @@ struct AuthController: RouteCollection {
         authRoute.get("reset-password", ":token", use: openResetPasswordLink)
         authRoute.post("change-password", use: resetPassword)
         authRoute.post("forgot-password", use: forgotPassword)
+        authRoute.post("validate-token", ":token", use: validateResetToken)
         
         let protectedRoutes = authRoute.grouped(UserAuthenticator())
         protectedRoutes.get(use: getUser)
         protectedRoutes.post("update", use: updateUser)
+    }
+    
+    @Sendable
+    func validateResetToken(req: Request) async throws -> HTTPStatus {
+        guard let token = req.parameters.get("token"),
+              let resetToken = try await PasswordResetToken.query(on: req.db)
+                .filter(\.$token == token)
+                .first()
+        else {
+            throw Abort(.notFound)
+        }
+
+        if resetToken.used {
+            throw Abort(.gone, reason: "Token ya usado")
+        }
+
+        if resetToken.expiresAt < Date() {
+            throw Abort(.unauthorized, reason: "Token expirado")
+        }
+
+        return .ok
     }
     
     @Sendable
