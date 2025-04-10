@@ -113,3 +113,9 @@ enum UserRole: String, Codable {
     case adopter
     case shelter
 }
+
+struct ResetPasswordRequest: Content {
+    let token: String
+    let newPassword: String
+    let confirmPassword: String
+}

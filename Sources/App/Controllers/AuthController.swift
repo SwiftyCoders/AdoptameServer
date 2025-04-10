@@ -105,7 +105,8 @@ struct AuthController: RouteCollection {
         authRoute.post("create", use: createUser)
         authRoute.post("apple", use: signInWithApple)
         authRoute.post("login", use: loginUser)
-        authRoute.get("reset-password", ":token", use: resetPassword)
+        authRoute.get("reset-password", ":token", use: openResetPasswordLink)
+        authRoute.post("change-password", use: resetPassword)
         authRoute.post("forgot-password", use: forgotPassword)
         
         let protectedRoutes = authRoute.grouped(UserAuthenticator())
@@ -114,10 +115,46 @@ struct AuthController: RouteCollection {
     }
     
     @Sendable
+    func openResetPasswordLink(req: Request) async throws -> HTTPStatus {
+        guard let token = req.parameters.get("token") else {
+            throw Abort(.badRequest, reason: "Token no encontrado en la URL")
+        }
+        
+        print("🔓 Validación inicial de token: \(token)")
+        return .ok
+    }
+    
+    @Sendable
     func resetPassword(req: Request) async throws -> HTTPStatus {
-        let token = req.parameters.get("token") ?? "sin token"
-           print("🔐 Token recibido:", token)
-           return .ok
+        let data = try req.content.decode(ResetPasswordRequest.self)
+        
+        guard data.newPassword == data.confirmPassword else {
+            throw Abort(.badRequest, reason: "Las contraseñas no coinciden")
+        }
+        
+        guard let resetToken = try await PasswordResetToken.query(on: req.db)
+            .filter(\.$token == data.token)
+            .with(\.$user)
+            .first()
+        else {
+            throw Abort(.notFound, reason: "Token no válido")
+        }
+        
+        guard resetToken.expiresAt > Date() else {
+            throw Abort(.unauthorized, reason: "Token expirado")
+        }
+        
+        guard !resetToken.used else {
+            throw Abort(.unauthorized, reason: "Token ya ha sido utilizado")
+        }
+        
+        resetToken.user.password = try Bcrypt.hash(data.newPassword)
+        resetToken.used = true
+        
+        try await resetToken.user.save(on: req.db)
+        try await resetToken.save(on: req.db)
+        
+        return .ok
     }
     
     @Sendable
