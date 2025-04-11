@@ -226,7 +226,7 @@ paths:
         "400":
           description: Fallo al actualizar usuario
 
-paths:
+
   /pets:
     get:
       tags: [Pets]
@@ -437,7 +437,6 @@ paths:
         "400":
           description: Datos incorrectos o error al guardar
 
-paths:
   /shelters:
     get:
       tags: [Shelters]
