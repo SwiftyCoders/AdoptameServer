@@ -228,3 +228,385 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+      
+tags:
+  - name: Pets
+    description: Endpoints relacionados con gestión de mascotas
+
+paths:
+  /pets:
+    get:
+      tags: [Pets]
+      summary: Obtener todas las mascotas
+      responses:
+        "200":
+          description: Lista de mascotas paginadas
+
+  /pets/byDistance:
+    get:
+      tags: [Pets]
+      summary: Buscar mascotas por distancia
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          schema:
+            type: number
+        - name: lon
+          in: query
+          required: true
+          schema:
+            type: number
+        - name: radius
+          in: query
+          required: false
+          schema:
+            type: number
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: per
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Mascotas ordenadas por proximidad
+
+  /pets/species/{specie}:
+    get:
+      tags: [Pets]
+      summary: Buscar mascotas por especie
+      parameters:
+        - name: specie
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: lat
+          in: query
+          required: true
+          schema:
+            type: number
+        - name: lon
+          in: query
+          required: true
+          schema:
+            type: number
+        - name: radius
+          in: query
+          schema:
+            type: number
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: per
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Mascotas filtradas por especie y distancia
+
+  /pets/byFilters:
+    get:
+      tags: [Pets]
+      summary: Buscar mascotas por filtros
+      parameters:
+        - name: types
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+        - name: gender
+          in: query
+          schema:
+            type: string
+        - name: size
+          in: query
+          schema:
+            type: string
+        - name: age
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Mascotas filtradas por parámetros
+
+  /pets/shelter:
+    get:
+      tags: [Pets]
+      summary: Obtener mascotas de la protectora actual
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Mascotas asociadas a la protectora del usuario
+
+  /pets/byShelter/{shelterID}:
+    get:
+      tags: [Pets]
+      summary: Obtener mascotas por ID de protectora
+      parameters:
+        - name: shelterID
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Mascotas asociadas a la protectora indicada
+
+  /pets/pet/{petID}:
+    get:
+      tags: [Pets]
+      summary: Obtener mascota por ID
+      parameters:
+        - name: petID
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Información de una mascota específica
+        "404":
+          description: Mascota no encontrada
+
+  /pets/{petID}:
+    delete:
+      tags: [Pets]
+      summary: Eliminar mascota por ID
+      parameters:
+        - name: petID
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Mascota eliminada correctamente
+        "404":
+          description: Mascota no encontrada
+
+  /pets:
+    post:
+      tags: [Pets]
+      summary: Crear una nueva mascota
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [name, age, breed, species, size, gender, adoptionStatus, images]
+              properties:
+                name:
+                  type: string
+                age:
+                  type: string
+                breed:
+                  type: string
+                species:
+                  type: string
+                size:
+                  type: string
+                gender:
+                  type: string
+                adoptionStatus:
+                  type: string
+                description:
+                  type: string
+                personality:
+                  type: string
+                idealHome:
+                  type: string
+                medicalCondition:
+                  type: string
+                adoptionInfo:
+                  type: string
+                images:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        "201":
+          description: Mascota creada correctamente
+        "400":
+          description: Datos incorrectos o error al guardar
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+tags:
+  - name: Shelters
+    description: Endpoints relacionados con protectoras
+
+paths:
+  /shelters:
+    get:
+      tags: [Shelters]
+      summary: Obtener todas las protectoras
+      responses:
+        "200":
+          description: Lista completa de protectoras
+
+    post:
+      tags: [Shelters]
+      summary: Crear una nueva protectora
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [name, contactEmail, latitude, longitude]
+              properties:
+                name:
+                  type: string
+                contactEmail:
+                  type: string
+                latitude:
+                  type: number
+                longitude:
+                  type: number
+                phone:
+                  type: string
+                address:
+                  type: string
+                website:
+                  type: string
+                description:
+                  type: string
+                image:
+                  type: string
+                  format: binary
+      responses:
+        "201":
+          description: Protectora creada correctamente
+        "400":
+          description: Datos inválidos o error al guardar
+        "409":
+          description: Usuario ya tiene una protectora
+
+  /shelters/{id}:
+    get:
+      tags: [Shelters]
+      summary: Obtener protectora por ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Detalle de protectora
+        "404":
+          description: Protectora no encontrada
+
+    delete:
+      tags: [Shelters]
+      summary: Eliminar protectora por ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Protectora eliminada correctamente
+        "404":
+          description: Protectora no encontrada
+
+  /shelters:
+    put:
+      tags: [Shelters]
+      summary: Actualizar protectora actual
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, contactEmail, latitude, longitude]
+              properties:
+                name:
+                  type: string
+                contactEmail:
+                  type: string
+                latitude:
+                  type: number
+                longitude:
+                  type: number
+                phone:
+                  type: string
+                address:
+                  type: string
+                website:
+                  type: string
+                description:
+                  type: string
+      responses:
+        "200":
+          description: Protectora actualizada correctamente
+        "403":
+          description: Solo las protectoras pueden actualizar su perfil
+        "404":
+          description: Protectora no encontrada
+
+  /shelters/byDistance:
+    get:
+      tags: [Shelters]
+      summary: Buscar protectoras por cercanía
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          schema:
+            type: number
+        - name: lon
+          in: query
+          required: true
+          schema:
+            type: number
+        - name: radius
+          in: query
+          schema:
+            type: number
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: per
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Lista de protectoras ordenadas por distancia
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
