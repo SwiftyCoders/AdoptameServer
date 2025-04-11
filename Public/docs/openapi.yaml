@@ -10,6 +10,10 @@ servers:
 tags:
   - name: Auth
     description: Endpoints relacionados con autenticación y usuarios
+  - name: Pets
+    description: Endpoints relacionados con gestión de mascotas
+  - name: Shelters
+    description: Endpoints relacionados con protectoras
 
 paths:
   /auth/create:
@@ -222,17 +226,6 @@ paths:
         "400":
           description: Fallo al actualizar usuario
 
-components:
-  securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-      
-tags:
-  - name: Pets
-    description: Endpoints relacionados con gestión de mascotas
-
 paths:
   /pets:
     get:
@@ -443,17 +436,6 @@ paths:
           description: Mascota creada correctamente
         "400":
           description: Datos incorrectos o error al guardar
-
-components:
-  securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-
-tags:
-  - name: Shelters
-    description: Endpoints relacionados con protectoras
 
 paths:
   /shelters:
