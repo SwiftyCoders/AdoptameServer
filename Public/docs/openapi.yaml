@@ -1,20 +1,230 @@
 openapi: 3.0.0
 info:
   title: RescueMe API
-  description: API de ejemplo mínima para probar Swagger UI
+  description: API REST de autenticación de usuarios para RescueMe.
   version: "1.0.0"
+servers:
+  - url: https://rescuemeapp.es
+    description: Servidor de producción
+
+tags:
+  - name: Auth
+    description: Endpoints relacionados con autenticación y usuarios
+
 paths:
-  /hello:
-    get:
-      summary: Devuelve un saludo
+  /auth/create:
+    post:
+      tags: [Auth]
+      summary: Crear nuevo usuario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password]
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        "201":
+          description: Usuario creado correctamente
+        "400":
+          description: Usuario ya existe o datos incorrectos
+
+  /auth/apple:
+    post:
+      tags: [Auth]
+      summary: Login con Apple
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [identityToken]
+              properties:
+                identityToken:
+                  type: string
+                  example: eyJhbGci...
       responses:
         "200":
-          description: OK
+          description: Usuario autenticado correctamente
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  message:
+                  token:
                     type: string
-                    example: "Hola desde Swagger"
+        "401":
+          description: Token inválido
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login de usuario con email y contraseña
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        "200":
+          description: Login correcto
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+        "401":
+          description: Credenciales inválidas
+
+  /auth/reset-password/{token}:
+    get:
+      tags: [Auth]
+      summary: Validar acceso con token desde enlace
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Token aceptado
+        "400":
+          description: Token no encontrado
+
+  /auth/change-password:
+    post:
+      tags: [Auth]
+      summary: Cambiar contraseña usando token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, newPassword, confirmPassword]
+              properties:
+                token:
+                  type: string
+                newPassword:
+                  type: string
+                confirmPassword:
+                  type: string
+      responses:
+        "200":
+          description: Contraseña cambiada correctamente
+        "400":
+          description: Datos inválidos
+        "401":
+          description: Token expirado o ya usado
+        "404":
+          description: Token no válido
+
+  /auth/forgot-password:
+    post:
+      tags: [Auth]
+      summary: Solicitar enlace de reseteo de contraseña
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+      responses:
+        "200":
+          description: Token generado y enviado si el usuario existe
+
+  /auth/validate-token/{token}:
+    post:
+      tags: [Auth]
+      summary: Validar token de reseteo de contraseña
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Token válido
+        "401":
+          description: Token expirado o ya usado
+        "404":
+          description: Token no encontrado
+
+  /auth:
+    get:
+      tags: [Auth]
+      summary: Obtener usuario autenticado
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Información del usuario actual
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  email:
+                    type: string
+                  name:
+                    type: string
+        "401":
+          description: Token no válido
+
+  /auth/update:
+    post:
+      tags: [Auth]
+      summary: Actualizar información del usuario
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password]
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        "201":
+          description: Usuario actualizado correctamente
+        "400":
+          description: Fallo al actualizar usuario
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

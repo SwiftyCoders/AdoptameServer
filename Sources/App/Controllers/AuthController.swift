@@ -135,7 +135,7 @@ struct AuthController: RouteCollection {
 
         return .ok
     }
-    
+     
     @Sendable
     func openResetPasswordLink(req: Request) async throws -> HTTPStatus {
         guard let token = req.parameters.get("token") else {
@@ -318,17 +318,6 @@ struct AuthController: RouteCollection {
     @Sendable
     func getUser(req: Request) async throws -> User {
         let user = try req.auth.require(User.self)
-        //        guard let bearer = req.headers.bearerAuthorization else {
-        //            throw Abort(.unauthorized, reason: "No token provided")
-        //        }
-        //
-        //        let payload = try await req.jwt.verify(bearer.token, as: UserPayload.self)
-        //
-        //        guard let user = try await User.find(payload.userID, on: req.db) else {
-        //            throw Abort(.unauthorized, reason: "Usuario no encontrado")
-        //        }
-        //        req.auth.login(user)
-        
         print(user.role)
         
         return user
