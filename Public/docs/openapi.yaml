@@ -234,6 +234,54 @@ paths:
       responses:
         "200":
           description: Lista de mascotas paginadas
+          
+    post:
+      tags: [Pets]
+      summary: Crear una nueva mascota
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [name, age, breed, species, size, gender, adoptionStatus, images]
+              properties:
+                name:
+                  type: string
+                age:
+                  type: string
+                breed:
+                  type: string
+                species:
+                  type: string
+                size:
+                  type: string
+                gender:
+                  type: string
+                adoptionStatus:
+                  type: string
+                description:
+                  type: string
+                personality:
+                  type: string
+                idealHome:
+                  type: string
+                medicalCondition:
+                  type: string
+                adoptionInfo:
+                  type: string
+                images:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        "201":
+          description: Mascota creada correctamente
+        "400":
+          description: Datos incorrectos o error al guardar
 
   /pets/byDistance:
     get:
@@ -387,55 +435,6 @@ paths:
           description: Mascota eliminada correctamente
         "404":
           description: Mascota no encontrada
-
-  /pets:
-    post:
-      tags: [Pets]
-      summary: Crear una nueva mascota
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              required: [name, age, breed, species, size, gender, adoptionStatus, images]
-              properties:
-                name:
-                  type: string
-                age:
-                  type: string
-                breed:
-                  type: string
-                species:
-                  type: string
-                size:
-                  type: string
-                gender:
-                  type: string
-                adoptionStatus:
-                  type: string
-                description:
-                  type: string
-                personality:
-                  type: string
-                idealHome:
-                  type: string
-                medicalCondition:
-                  type: string
-                adoptionInfo:
-                  type: string
-                images:
-                  type: array
-                  items:
-                    type: string
-                    format: binary
-      responses:
-        "201":
-          description: Mascota creada correctamente
-        "400":
-          description: Datos incorrectos o error al guardar
 
   /shelters:
     get:
