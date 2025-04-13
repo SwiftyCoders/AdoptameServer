@@ -7,11 +7,10 @@ struct SheltersController: RouteCollection {
     func boot(routes: RoutesBuilder) throws {
         let shelters = routes.grouped("shelters")
         let tokenProtected = shelters.grouped(UserAuthenticator())
-        //        tokenProtected.on(.POST, use: createShelter)
         tokenProtected.on(.POST, body: .collect(maxSize: "20mb"), use: createShelter)
         shelters.get(use: getAllShelters)
         shelters.get(":id", use: getShelterByID)
-        tokenProtected.put(use: updateShelter)
+        tokenProtected.post("update", use: updateShelter)
         shelters.delete(":id", use: deleteShelter)
         tokenProtected.get("byDistance", use: getSheltersByDistance)
     }
@@ -98,29 +97,76 @@ struct SheltersController: RouteCollection {
     }
     
     @Sendable
-    func updateShelter(req: Request) async throws -> Shelter {
+    func updateShelter(req: Request) async throws -> HTTPStatus {
+        print("🟡 Iniciando actualización de shelter")
+        
+        _ = try await req.body.collect(max: 50).get()
+        
         let user = try req.auth.require(User.self)
         
-        guard user.role == .shelter, let shelterID = user.$shelterID.value else {
-            throw Abort(.forbidden, reason: "Only shelters can update their profile")
+        guard let shelterID = user.shelterID else {
+            throw Abort(.notFound, reason: "User has no associated shelter")
         }
         
         guard let shelter = try await Shelter.find(shelterID, on: req.db) else {
             throw Abort(.notFound, reason: "Shelter not found")
         }
         
-        let updatedShelter = try req.content.decode(PostShelterResponseModel.self)
-        shelter.name = updatedShelter.name
-        shelter.contactEmail = updatedShelter.contactEmail
-        shelter.phone = updatedShelter.phone
-        shelter.address = updatedShelter.address
-        shelter.latitude = updatedShelter.latitude
-        shelter.longitude = updatedShelter.longitude
-        shelter.websiteURL = updatedShelter.website
-        shelter.description = updatedShelter.description
+        let formData = try req.content.decode(ShelterFormData.self)
+                
+        print("formData:", formData)
+        print("formData.image:", formData.image ?? "SIN IMAGEN")
+        
+        if let imageFile = formData.image {
+            let publicDir = req.application.directory.publicDirectory
+            let uploadsDir = publicDir + "uploads"
+            
+            // Eliminar la imagen anterior si existe
+            if let oldImageURL = shelter.imageURL {
+                let oldImagePath = publicDir + oldImageURL
+                if FileManager.default.fileExists(atPath: oldImagePath) {
+                    try? FileManager.default.removeItem(atPath: oldImagePath)
+                    print("🗑️ Imagen anterior eliminada: \(oldImagePath)")
+                }
+            }
+            
+            // Guardar la nueva imagen
+            let byteBuffer = imageFile.data
+            try FileManager.default.createDirectory(atPath: uploadsDir, withIntermediateDirectories: true)
+            
+            let fileName = "\(UUID().uuidString).jpg"
+            let filePath = uploadsDir + "/\(fileName)"
+            
+            try await req.fileio.writeFile(byteBuffer, at: filePath)
+            
+            shelter.imageURL = "uploads/\(fileName)"
+        }
+        
+        // Actualizar campos
+        shelter.name = formData.name
+        shelter.contactEmail = formData.contactEmail
+        shelter.latitude = formData.latitude
+        shelter.longitude = formData.longitude
+        shelter.phone = formData.phone ?? ""
+        shelter.address = formData.address ?? ""
+        shelter.websiteURL = formData.website
+        shelter.description = formData.description ?? ""
         
         try await shelter.save(on: req.db)
-        return shelter
+        
+        // Actualizar ubicación geográfica
+        guard let sqlDb = req.db as? SQLDatabase else {
+            throw Abort(.internalServerError, reason: "SQLDatabase no accesible.")
+        }
+        
+        let locationString = "SRID=4326;POINT(\(shelter.longitude) \(shelter.latitude))"
+        
+        try await sqlDb.raw("""
+                UPDATE shelters SET location = ST_GeogFromText(\(bind: locationString))
+                WHERE id = \(bind: shelter.requireID())
+            """).run()
+        
+        return .ok
     }
     
     @Sendable
