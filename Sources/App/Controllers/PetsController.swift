@@ -21,6 +21,8 @@ struct PetsController: RouteCollection {
     
     @Sendable
     func createPet(req: Request) async throws -> HTTPStatus {
+        print("EMPIEZO PET: \(Date.now)")
+        
         _ = try await req.body.collect(max: 50).get()
         
         let user = try req.auth.require(User.self)
@@ -101,6 +103,8 @@ struct PetsController: RouteCollection {
                 UPDATE pets SET location = ST_GeogFromText(\(bind: locationString))
                 WHERE id = \(bind: dbPet.requireID())
             """).run()
+            
+            print("ACABO PET: \(Date.now)")
             
             return .created
         } catch {

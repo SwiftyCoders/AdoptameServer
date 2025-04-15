@@ -98,6 +98,7 @@ struct SheltersController: RouteCollection {
     
     @Sendable
     func updateShelter(req: Request) async throws -> HTTPStatus {
+        print("EMPIEZO UPDATE SHELTER: \(Date.now)")
         print("🟡 Iniciando actualización de shelter")
         
         _ = try await req.body.collect(max: 50).get()
@@ -166,6 +167,8 @@ struct SheltersController: RouteCollection {
                 WHERE id = \(bind: shelter.requireID())
             """).run()
         
+        
+        print("ACABO UPDATE SHELTER: \(Date.now)")
         return .ok
     }
     
