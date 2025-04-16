@@ -96,12 +96,85 @@ struct SheltersController: RouteCollection {
         return shelter
     }
     
+//    @Sendable
+//    func updateShelter(req: Request) async throws -> HTTPStatus {
+//        print("EMPIEZO UPDATE SHELTER: \(Date.now)")
+//        print("🟡 Iniciando actualización de shelter")
+//        
+//        _ = try await req.body.collect(max: 50).get()
+//        
+//        let user = try req.auth.require(User.self)
+//        
+//        guard let shelterID = user.shelterID else {
+//            throw Abort(.notFound, reason: "User has no associated shelter")
+//        }
+//        
+//        guard let shelter = try await Shelter.find(shelterID, on: req.db) else {
+//            throw Abort(.notFound, reason: "Shelter not found")
+//        }
+//        
+//        let formData = try req.content.decode(ShelterFormData.self)
+//                
+//        print("formData:", formData)
+//        print("formData.image:", formData.image ?? "SIN IMAGEN")
+//        
+//        if let imageFile = formData.image {
+//            let publicDir = req.application.directory.publicDirectory
+//            let uploadsDir = publicDir + "uploads"
+//            
+//            // Eliminar la imagen anterior si existe
+//            if let oldImageURL = shelter.imageURL {
+//                let oldImagePath = publicDir + oldImageURL
+//                if FileManager.default.fileExists(atPath: oldImagePath) {
+//                    try? FileManager.default.removeItem(atPath: oldImagePath)
+//                    print("🗑️ Imagen anterior eliminada: \(oldImagePath)")
+//                }
+//            }
+//            
+//            // Guardar la nueva imagen
+//            let byteBuffer = imageFile.data
+//            try FileManager.default.createDirectory(atPath: uploadsDir, withIntermediateDirectories: true)
+//            
+//            let fileName = "\(UUID().uuidString).jpg"
+//            let filePath = uploadsDir + "/\(fileName)"
+//            
+//            try await req.fileio.writeFile(byteBuffer, at: filePath)
+//            
+//            shelter.imageURL = "uploads/\(fileName)"
+//        }
+//        
+//        // Actualizar campos
+//        shelter.name = formData.name
+//        shelter.contactEmail = formData.contactEmail
+//        shelter.latitude = formData.latitude
+//        shelter.longitude = formData.longitude
+//        shelter.phone = formData.phone ?? ""
+//        shelter.address = formData.address ?? ""
+//        shelter.websiteURL = formData.website
+//        shelter.description = formData.description ?? ""
+//        
+//        try await shelter.save(on: req.db)
+//        
+//        // Actualizar ubicación geográfica
+//        guard let sqlDb = req.db as? SQLDatabase else {
+//            throw Abort(.internalServerError, reason: "SQLDatabase no accesible.")
+//        }
+//        
+//        let locationString = "SRID=4326;POINT(\(shelter.longitude) \(shelter.latitude))"
+//        
+//        try await sqlDb.raw("""
+//                UPDATE shelters SET location = ST_GeogFromText(\(bind: locationString))
+//                WHERE id = \(bind: shelter.requireID())
+//            """).run()
+//        
+//        
+//        print("ACABO UPDATE SHELTER: \(Date.now)")
+//        return .ok
+//    }
+    
     @Sendable
     func updateShelter(req: Request) async throws -> HTTPStatus {
-        print("EMPIEZO UPDATE SHELTER: \(Date.now)")
         print("🟡 Iniciando actualización de shelter")
-        
-        _ = try await req.body.collect(max: 50).get()
         
         let user = try req.auth.require(User.self)
         
@@ -114,36 +187,7 @@ struct SheltersController: RouteCollection {
         }
         
         let formData = try req.content.decode(ShelterFormData.self)
-                
-        print("formData:", formData)
-        print("formData.image:", formData.image ?? "SIN IMAGEN")
         
-        if let imageFile = formData.image {
-            let publicDir = req.application.directory.publicDirectory
-            let uploadsDir = publicDir + "uploads"
-            
-            // Eliminar la imagen anterior si existe
-            if let oldImageURL = shelter.imageURL {
-                let oldImagePath = publicDir + oldImageURL
-                if FileManager.default.fileExists(atPath: oldImagePath) {
-                    try? FileManager.default.removeItem(atPath: oldImagePath)
-                    print("🗑️ Imagen anterior eliminada: \(oldImagePath)")
-                }
-            }
-            
-            // Guardar la nueva imagen
-            let byteBuffer = imageFile.data
-            try FileManager.default.createDirectory(atPath: uploadsDir, withIntermediateDirectories: true)
-            
-            let fileName = "\(UUID().uuidString).jpg"
-            let filePath = uploadsDir + "/\(fileName)"
-            
-            try await req.fileio.writeFile(byteBuffer, at: filePath)
-            
-            shelter.imageURL = "uploads/\(fileName)"
-        }
-        
-        // Actualizar campos
         shelter.name = formData.name
         shelter.contactEmail = formData.contactEmail
         shelter.latitude = formData.latitude
@@ -152,10 +196,10 @@ struct SheltersController: RouteCollection {
         shelter.address = formData.address ?? ""
         shelter.websiteURL = formData.website
         shelter.description = formData.description ?? ""
+        shelter.imageURL = formData.image
         
         try await shelter.save(on: req.db)
         
-        // Actualizar ubicación geográfica
         guard let sqlDb = req.db as? SQLDatabase else {
             throw Abort(.internalServerError, reason: "SQLDatabase no accesible.")
         }
@@ -215,45 +259,90 @@ struct SheltersController: RouteCollection {
         }
     }
     
+//    @Sendable
+//    func createShelter(req: Request) async throws -> HTTPStatus {
+//        print("🔵 Iniciando procesamiento de createShelter")
+//        
+//        _ = try await req.body.collect(max: 50).get()
+//        
+//        let user = try req.auth.require(User.self)
+//        print("✅ Usuario autenticado: \(String(describing: user.email))")
+//        
+//        //Añadir comprobación email ya existe
+//        
+//        if user.shelterID != nil {
+//            throw Abort(.conflict, reason: "User already has a shelter")
+//        }
+//        
+//        let formData = try req.content.decode(ShelterFormData.self)
+//        
+//        print("formData:", formData)
+//        print("formData.image:", formData.image ?? "SIN IMAGEN")
+//        
+//        var imagePath: String? = nil
+//        
+//        if let imageFile = formData.image {
+//            let byteBuffer = imageFile.data
+//            let publicDir = req.application.directory.publicDirectory
+//            let uploadsDir = publicDir + "uploads"
+//            
+//            try FileManager.default.createDirectory(
+//                atPath: uploadsDir,
+//                withIntermediateDirectories: true
+//            )
+//            
+//            let fileName = "\(UUID().uuidString).jpg"
+//            let filePath = uploadsDir + "/\(fileName)"
+//            
+//            try await req.fileio.writeFile(byteBuffer, at: filePath)
+//            
+//            imagePath = "uploads/\(fileName)"
+//        }
+//        
+//        let finalShelter = Shelter(
+//            name: formData.name,
+//            contactEmail: formData.contactEmail,
+//            latitude: formData.latitude,
+//            longitude: formData.longitude,
+//            ownerID: user.id!,
+//            phone: formData.phone ?? "",
+//            address: formData.address ?? "",
+//            websiteURL: formData.website,
+//            imageURL: imagePath,
+//            description: formData.description ?? "",
+//            location: nil
+//        )
+//        
+//        try await finalShelter.save(on: req.db)
+//        
+//        guard let sqlDb = req.db as? SQLDatabase else {
+//            throw Abort(.internalServerError, reason: "SQLDatabase no accesible.")
+//        }
+//        
+//        let locationString = "SRID=4326;POINT(\(finalShelter.longitude) \(finalShelter.latitude))"
+//        
+//        try await sqlDb.raw("""
+//            UPDATE shelters SET location = ST_GeogFromText(\(bind: locationString))
+//            WHERE id = \(bind: finalShelter.requireID())
+//        """).run()
+//        
+//        user.shelterID = finalShelter.id
+//        user.role = .shelter
+//        try await user.save(on: req.db)
+//        
+//        return .created
+//    }
+    
     @Sendable
     func createShelter(req: Request) async throws -> HTTPStatus {
-        print("🔵 Iniciando procesamiento de createShelter")
-        
-        _ = try await req.body.collect(max: 50).get()
-        
         let user = try req.auth.require(User.self)
         print("✅ Usuario autenticado: \(String(describing: user.email))")
-        
-        //Añadir comprobación email ya existe
         
         if user.shelterID != nil {
             throw Abort(.conflict, reason: "User already has a shelter")
         }
         
         let formData = try req.content.decode(ShelterFormData.self)
-        
-        print("formData:", formData)
-        print("formData.image:", formData.image ?? "SIN IMAGEN")
-        
-        var imagePath: String? = nil
-        
-        if let imageFile = formData.image {
-            let byteBuffer = imageFile.data
-            let publicDir = req.application.directory.publicDirectory
-            let uploadsDir = publicDir + "uploads"
-            
-            try FileManager.default.createDirectory(
-                atPath: uploadsDir,
-                withIntermediateDirectories: true
-            )
-            
-            let fileName = "\(UUID().uuidString).jpg"
-            let filePath = uploadsDir + "/\(fileName)"
-            
-            try await req.fileio.writeFile(byteBuffer, at: filePath)
-            
-            imagePath = "uploads/\(fileName)"
-        }
         
         let finalShelter = Shelter(
             name: formData.name,
@@ -264,7 +353,7 @@ struct SheltersController: RouteCollection {
             phone: formData.phone ?? "",
             address: formData.address ?? "",
             websiteURL: formData.website,
-            imageURL: imagePath,
+            imageURL: formData.image,
             description: formData.description ?? "",
             location: nil
         )
@@ -300,7 +389,7 @@ struct ShelterFormData: Content {
     let phone: String?
     let website: String?
     let address: String?
-    let image: File?
+    let image: String?
 }
 
 struct PostShelterResponseModel: Content {
