@@ -196,7 +196,8 @@ struct SheltersController: RouteCollection {
         shelter.address = formData.address ?? ""
         shelter.websiteURL = formData.website
         shelter.description = formData.description ?? ""
-        shelter.imageURL = formData.image
+                
+        shelter.imageURL = formData.imageURL
         
         try await shelter.save(on: req.db)
         
@@ -353,7 +354,7 @@ struct SheltersController: RouteCollection {
             phone: formData.phone ?? "",
             address: formData.address ?? "",
             websiteURL: formData.website,
-            imageURL: formData.image,
+            imageURL: formData.imageURL,
             description: formData.description ?? "",
             location: nil
         )
@@ -389,7 +390,7 @@ struct ShelterFormData: Content {
     let phone: String?
     let website: String?
     let address: String?
-    let image: String?
+    let imageURL: String?
 }
 
 struct PostShelterResponseModel: Content {
