@@ -19,53 +19,112 @@ struct PetsController: RouteCollection {
         tokenProtected.get("byShelter", ":shelterID", use: getPetsFromShelterByID)
     }
     
+//    @Sendable
+//    func createPet2(req: Request) async throws -> HTTPStatus {
+//        print("🚀 INICIO PET: \(Date.now)")
+//
+//        // 1. Asegurate de permitir un tamaño adecuado de cuerpo (50 MB por ejemplo)
+//        _ = try await req.body.collect(max: 50 * 1024 * 1024).get()
+//
+//        let user = try req.auth.require(User.self)
+//        let petFormData = try req.content.decode(PetFormData.self)
+//
+//        guard let images = petFormData.images else {
+//            throw Abort(.badRequest, reason: "Image is required")
+//        }
+//
+//        var imageURLs: [String] = []
+//
+//        // 2. Prepara el directorio una única vez
+//        let uploadsDir = req.application.directory.publicDirectory + "pets/"
+//        try FileManager.default.createDirectory(
+//            atPath: uploadsDir,
+//            withIntermediateDirectories: true,
+//            attributes: nil
+//        )
+//
+//        // 3. Medí el tiempo de escritura
+//        let startWrite = Date()
+//
+//        // 4. Guardá todas las imágenes en paralelo
+//        try await withThrowingTaskGroup(of: String.self) { group in
+//            for image in images {
+//                group.addTask {
+//                    let byteBuffer = image.data
+//                    let fileName = "\(UUID().uuidString).jpg"
+//                    let filePath = uploadsDir + fileName
+//                    try await req.fileio.writeFile(byteBuffer, at: filePath)
+//                    return "/pets/\(fileName)"
+//                }
+//            }
+//
+//            for try await imageURL in group {
+//                imageURLs.append(imageURL)
+//            }
+//        }
+//
+//        print("📝 Escritura de imágenes terminada en \(Date().timeIntervalSince(startWrite))s")
+//
+//        // 5. Obtener shelter del usuario
+//        guard let userShelterID = user.shelterID else {
+//            throw Abort(.notFound, reason: "User shelter ID Not found")
+//        }
+//
+//        guard let userShelter = try await Shelter.query(on: req.db)
+//            .filter(\Shelter.$id == userShelterID)
+//            .first() else {
+//            throw Abort(.notFound, reason: "User Shelter Not found")
+//        }
+//
+//        // 6. Crear mascota en la base de datos
+//        do {
+//            let dbPet = Pet(
+//                shelterID: userShelterID,
+//                name: petFormData.name,
+//                age: petFormData.age,
+//                description: petFormData.description,
+//                personality: petFormData.personality,
+//                idealHome: petFormData.idealHome,
+//                medicalCondition: petFormData.medicalCondition,
+//                adoptionInfo: petFormData.adoptionInfo,
+//                species: petFormData.species,
+//                breed: petFormData.breed,
+//                size: petFormData.size,
+//                gender: petFormData.gender,
+//                adoptionStatus: petFormData.adoptionStatus,
+//                imageURLs: imageURLs,
+//                latitude: userShelter.latitude,
+//                longitude: userShelter.longitude,
+//                location: nil
+//            )
+//
+//            try await dbPet.save(on: req.db)
+//
+//            guard let sqlDb = req.db as? SQLDatabase else {
+//                throw Abort(.internalServerError, reason: "SQLDatabase no accesible.")
+//            }
+//
+//            let locationString = "SRID=4326;POINT(\(dbPet.longitude) \(dbPet.latitude))"
+//
+//            try await sqlDb.raw("""
+//                UPDATE pets SET location = ST_GeogFromText(\(bind: locationString))
+//                WHERE id = \(bind: dbPet.requireID())
+//            """).run()
+//
+//            print("✅ FIN PET: \(Date.now)")
+//            return .created
+//
+//        } catch {
+//            print("❌ ERROR: \(String(reflecting: error))")
+//            throw Abort(.badRequest, reason: "Cannot create new pet for shelter \(userShelter.name)")
+//        }
+//    }
+    
     @Sendable
     func createPet(req: Request) async throws -> HTTPStatus {
-        print("🚀 INICIO PET: \(Date.now)")
-
-        // 1. Asegurate de permitir un tamaño adecuado de cuerpo (50 MB por ejemplo)
-        _ = try await req.body.collect(max: 50 * 1024 * 1024).get()
-
         let user = try req.auth.require(User.self)
         let petFormData = try req.content.decode(PetFormData.self)
 
-        guard let images = petFormData.images else {
-            throw Abort(.badRequest, reason: "Image is required")
-        }
-
-        var imageURLs: [String] = []
-
-        // 2. Prepara el directorio una única vez
-        let uploadsDir = req.application.directory.publicDirectory + "pets/"
-        try FileManager.default.createDirectory(
-            atPath: uploadsDir,
-            withIntermediateDirectories: true,
-            attributes: nil
-        )
-
-        // 3. Medí el tiempo de escritura
-        let startWrite = Date()
-
-        // 4. Guardá todas las imágenes en paralelo
-        try await withThrowingTaskGroup(of: String.self) { group in
-            for image in images {
-                group.addTask {
-                    let byteBuffer = image.data
-                    let fileName = "\(UUID().uuidString).jpg"
-                    let filePath = uploadsDir + fileName
-                    try await req.fileio.writeFile(byteBuffer, at: filePath)
-                    return "/pets/\(fileName)"
-                }
-            }
-
-            for try await imageURL in group {
-                imageURLs.append(imageURL)
-            }
-        }
-
-        print("📝 Escritura de imágenes terminada en \(Date().timeIntervalSince(startWrite))s")
-
-        // 5. Obtener shelter del usuario
         guard let userShelterID = user.shelterID else {
             throw Abort(.notFound, reason: "User shelter ID Not found")
         }
@@ -76,7 +135,6 @@ struct PetsController: RouteCollection {
             throw Abort(.notFound, reason: "User Shelter Not found")
         }
 
-        // 6. Crear mascota en la base de datos
         do {
             let dbPet = Pet(
                 shelterID: userShelterID,
@@ -92,7 +150,7 @@ struct PetsController: RouteCollection {
                 size: petFormData.size,
                 gender: petFormData.gender,
                 adoptionStatus: petFormData.adoptionStatus,
-                imageURLs: imageURLs,
+                imageURLs: petFormData.images,
                 latitude: userShelter.latitude,
                 longitude: userShelter.longitude,
                 location: nil
@@ -111,9 +169,7 @@ struct PetsController: RouteCollection {
                 WHERE id = \(bind: dbPet.requireID())
             """).run()
 
-            print("✅ FIN PET: \(Date.now)")
             return .created
-
         } catch {
             print("❌ ERROR: \(String(reflecting: error))")
             throw Abort(.badRequest, reason: "Cannot create new pet for shelter \(userShelter.name)")
@@ -536,7 +592,7 @@ struct PetFormData: Content {
     let medicalCondition: String?
     let adoptionInfo: String?
     let breed: String
-    let images: [File]?
+    let images: [String]
     
     let size: PetSize
     let adoptionStatus: AdoptionStatus
